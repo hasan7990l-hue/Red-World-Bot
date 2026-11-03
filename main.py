@@ -9,9 +9,9 @@ import threading
 
 # ================= الإعدادات =================
 TELEGRAM_TOKEN = '8386513995:AAH6GWopP1_8jWCVZvUj_Yix1pjYNt_zGts'
-GROQ_API_KEY = 'ضع_مفتاح_جروك_هنا' # <--- ضع مفتاحك هنا (gsk_...)
+GROQ_API_KEY = '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'
 CHANNEL_ID = '@Eror_7'
-ADMIN_ID = 123456789 # <--- ضع الايدي الخاص بك هنا (رقمك)
+ADMIN_ID = 8456056018 # <--- ضع الايدي الخاص بك هنا (رقمك)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
