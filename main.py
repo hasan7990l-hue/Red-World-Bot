@@ -9,9 +9,9 @@ import threading
 
 # ================= الإعدادات =================
 TELEGRAM_TOKEN = '8386513995:AAH6GWopP1_8jWCVZvUj_Yix1pjYNt_zGts'
-GROQ_API_KEY = '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'
+GROQ_API_KEY = 'ضع_مفتاح_جروك_هنا' # <--- ضع مفتاحك هنا (gsk_...)
 CHANNEL_ID = '@Eror_7'
-ADMIN_ID = 8456056018 # <--- ضع الايدي الخاص بك هنا (رقمك)
+ADMIN_ID = 123456789 # <--- ضع الايدي الخاص بك هنا (رقمك)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
@@ -29,36 +29,33 @@ settings = {
 generated_texts = {}
 pending_posts = {} # لتخزين المنشورات المؤقتة (المعاينة والجدولة)
 
-# ================= إشعار الرفع التلقائي (فحص المشرف) =================
+# ================= إشعار الرفع التلقائي =================
 def check_admin_status_and_notify():
     time.sleep(3)
     try:
         bot_info = bot.get_me()
         chat_info = bot.get_chat(CHANNEL_ID)
-        admins = bot.get_chat_administrators(CHANNEL_ID)
-        is_admin = any(admin.user.id == bot_info.id for admin in admins)
         
-        status_text = "مشرف (Admin) - لديه صلاحيات النشر" if is_admin else "عضو عادي (ليس مشرفاً)"
-        status_color = "تم الرفع بنجاح" if is_admin else "يرجى ترقيته إلى مشرف"
-
         notification_text = (
             f"<b>⟨ تقرير حالة البوت | Bot Status ⟩</b>\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
             f"<blockquote>"
             f"<b>اسم البوت:</b> @{bot_info.username}\n"
             f"<b>اسم القناة:</b> {chat_info.title}\n"
-            f"<b>حالة الصلاحيات:</b> <i>{status_text}</i>\n"
-            f"<b>النتيجة:</b> <i>{status_color}</i>\n"
+            f"<b>حالة الاتصال:</b> <i>متصل بنجاح (Online)</i>\n"
             f"<b>الوقت:</b> {datetime.datetime.now().strftime('%Y-%m-%d | %H:%M:%S')}"
             f"</blockquote>\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-            f"<i>نظام إدارة عالم الأحمر جاهز للعمل.</i>"
+            f"<i>ملاحظة: تأكد يدوياً من أن البوت مشرف (Admin) في القناة لكي يتمكن من النشر.</i>"
         )
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton("مشاركة البوت", url=f"https://t.me/share/url?url=https://t.me/{bot_info.username}"))
         bot.send_message(ADMIN_ID, notification_text, reply_markup=markup, parse_mode='HTML')
+        
     except Exception as e:
-        try: bot.send_message(ADMIN_ID, f"خطأ في الفحص: {e}")
-        except: pass
+        try: 
+            bot.send_message(ADMIN_ID, f"⚠️ تنبيه: البوت غير قادر على الاتصال بالقناة.\nالسبب: {e}\n\nتأكد من إضافة البوت إلى القناة أولاً.")
+        except: 
+            pass
 
 threading.Thread(target=check_admin_status_and_notify, daemon=True).start()
 
@@ -73,7 +70,7 @@ def schedule_post(post_id, delay_minutes):
             elif data['type'] == 'text':
                 bot.send_message(CHANNEL_ID, data['caption'], parse_mode='HTML')
             
-            bot.send_message(ADMIN_ID, f"✅ تم النشر المجدول بنجاح في القناة.")
+            bot.send_message(ADMIN_ID, "✅ تم النشر المجدول بنجاح في القناة.")
             del pending_posts[post_id]
         except Exception as e:
             bot.send_message(ADMIN_ID, f"❌ فشل النشر المجدول: {e}")
@@ -121,6 +118,13 @@ def get_formatting_panel_markup(data, msg_id):
     markup.add(InlineKeyboardButton("اقتباس [مفعل]" if data["quote"] else "اقتباس", callback_data=f"fmt_quote_{msg_id}"))
     markup.add(InlineKeyboardButton("نسخ النص", callback_data=f"fmt_copy_{msg_id}"), InlineKeyboardButton("نشر في القناة", callback_data=f"fmt_publish_{msg_id}"))
     return markup
+
+# ================= الدالة المفقودة التي سببت الخطأ =================
+def send_formatting_panel(chat_id, msg_id):
+    data = generated_texts[msg_id]
+    text = apply_formatting(data)
+    markup = get_formatting_panel_markup(data, msg_id)
+    bot.send_message(chat_id, f"معاينة النص:\n\n{text}", reply_markup=markup, parse_mode='HTML')
 
 def apply_formatting(data):
     text = data["raw"]
@@ -232,7 +236,7 @@ def callback_handler(call):
         elif action == "publish":
             final_text = apply_formatting(data)
             if settings["add_hashtags"]: final_text += f"\n\n{settings['hashtags']}"
-            # إرسال العبارة للمعاينة كـ (نص) قبل النشر
+            
             post_id = str(int(time.time()))
             pending_posts[post_id] = {'type': 'text', 'caption': final_text}
             
@@ -259,7 +263,6 @@ def process_schedule_time(message, post_id):
         minutes = int(message.text)
         if post_id in pending_posts:
             bot.reply_to(message, f"✅ تم جدولة المنشور للنشر بعد {minutes} دقيقة.")
-            # تشغيل مؤقت في الخلفية
             threading.Thread(target=schedule_post, args=(post_id, minutes), daemon=True).start()
         else:
             bot.reply_to(message, "❌ حدث خطأ، المنشور غير موجود.")
@@ -295,7 +298,6 @@ def handle_photo(message):
         final_caption = f"<b>{ai_text}</b>"
         if settings["add_hashtags"]: final_caption += f"\n\n{settings['hashtags']}"
 
-        # إرسال للمعاينة (نشر الآن، جدولة، إلغاء)
         post_id = str(int(time.time()))
         pending_posts[post_id] = {'type': 'photo', 'file_id': message.photo[-1].file_id, 'caption': final_caption}
         
