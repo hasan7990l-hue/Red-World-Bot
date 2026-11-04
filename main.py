@@ -191,40 +191,44 @@ def callback_handler(call):
     elif call.data == "toggle_status":
         settings["status"] = "OFF" if settings["status"] == "ON" else "ON"
         bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
-        return bot.answer_callback_query(call.id, text=f"تم تغيير الحالة إلى: {'مفعل' if settings['status'] == 'ON' else 'معطل'}")
+        return bot.answer_callback_query(call.id, text=f"حالة النشر: {'مفعل' if settings['status'] == 'ON' else 'معطل'}", show_alert=False)
 
     elif call.data == "toggle_text_mode":
         settings["text_only_mode"] = not settings["text_only_mode"]
         bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
-        return bot.answer_callback_query(call.id, text=f"وضع النشر النصي: {'مفعل' if settings['text_only_mode'] else 'معطل'}")
+        return bot.answer_callback_query(call.id, text=f"النشر النصي: {'مفعل' if settings['text_only_mode'] else 'معطل'}", show_alert=False)
 
     elif call.data == "menu_lang":
-        text = "<b>إعدادات اللغة:</b>\n\nهذا الزر يحدد لغة العبارات التي سيولدها الذكاء الاصطناعي (عربي، إنجليزي، أو خليط بينهما)."
+        text = "<b>إعدادات اللغة:</b>\n\nاختر اللغة التي تريدها:"
         bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_lang_panel(), parse_mode='HTML')
-        return bot.answer_callback_query(call.id, text="اختر لغة التوليد")
+        return bot.answer_callback_query(call.id)
 
     elif call.data.startswith("lang_"):
         settings["language"] = call.data.replace("lang_", "")
-        bot.edit_message_text(f"<b>القائمة الرئيسية:</b>\nتم تحديث اللغة إلى: <b>{settings['language']}</b>", 
+        # إرجاع القائمة الرئيسية (عبر تعديل الرسالة الحالية)
+        bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", 
                               chat_id=call.message.chat.id, 
                               message_id=call.message.message_id, 
                               reply_markup=get_main_panel(), 
                               parse_mode='HTML')
-        return bot.answer_callback_query(call.id, text="تم التحديث")
+        # إشعار منسدل (Toast)
+        return bot.answer_callback_query(call.id, text=f"تم اختيار اللغة: {settings['language']}", show_alert=False)
 
     elif call.data == "menu_categories":
-        text = "<b>فئات العبارات:</b>\n\nهذا الزر يحدد (أسلوب) النص الذي سيكتبه البوت. اختر الفئة التي تناسب جو القناة."
+        text = "<b>فئات العبارات:</b>\n\nاختر الفئة التي تناسب جو القناة:"
         bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_categories_panel(), parse_mode='HTML')
-        return bot.answer_callback_query(call.id, text="اختر الأسلوب المناسب")
+        return bot.answer_callback_query(call.id)
 
     elif call.data.startswith("cat_"):
         settings["category"] = call.data.replace("cat_", "")
-        bot.edit_message_text(f"<b>القائمة الرئيسية:</b>\nتم اختيار فئة: <b>{settings['category']}</b>", 
+        # إرجاع القائمة الرئيسية (عبر تعديل الرسالة الحالية)
+        bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", 
                               chat_id=call.message.chat.id, 
                               message_id=call.message.message_id, 
                               reply_markup=get_main_panel(), 
                               parse_mode='HTML')
-        return bot.answer_callback_query(call.id, text="تم التحديث")
+        # إشعار منسدل (Toast)
+        return bot.answer_callback_query(call.id, text=f"تم اختيار الفئة: {settings['category']}", show_alert=False)
 
     elif call.data == "show_source":
         try:
@@ -246,10 +250,10 @@ def callback_handler(call):
             InlineKeyboardButton("رجوع للقائمة", callback_data="main_menu")
         )
         bot.edit_message_text(source_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
-        return bot.answer_callback_query(call.id, text="معلومات السورس")
+        return bot.answer_callback_query(call.id)
 
     elif call.data == "generate_text":
-        bot.answer_callback_query(call.id, text="جاري التوليد...")
+        bot.answer_callback_query(call.id, text="جاري التوليد...", show_alert=False)
         lang_prompt = f"باللغة {settings['language']}" if settings['language'] != "مختلط" else "مزيج بين العربية والإنجليزية"
         prompt = f"اكتب عبارة قصيرة جداً بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها عالم الأحمر. بدون إيموجي."
         try:
@@ -273,16 +277,15 @@ def callback_handler(call):
         data = generated_texts[msg_id]
 
         if action == "cancel":
-            bot.edit_message_text("<b>القائمة الرئيسية:</b>\nتم إلغاء العبارة وحذفها بنجاح.", 
-                                  chat_id=call.message.chat.id, 
-                                  message_id=call.message.message_id, 
-                                  reply_markup=get_main_panel(), 
-                                  parse_mode='HTML')
-            return bot.answer_callback_query(call.id, text="تم الإلغاء")
+            try: bot.delete_message(call.message.chat.id, call.message.message_id)
+            except: pass
+            bot.answer_callback_query(call.id, text="تم إلغاء العبارة وحذفها", show_alert=False)
+            bot.send_message(call.message.chat.id, "<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", reply_markup=get_main_panel(), parse_mode='HTML')
+            return
 
         elif action == "copy":
             bot.send_message(call.message.chat.id, f"`{data['raw']}`", parse_mode='MarkdownV2')
-            return bot.answer_callback_query(call.id, "تم إرسال النص للنسخ")
+            return bot.answer_callback_query(call.id, text="تم إرسال النص للنسخ", show_alert=False)
 
         elif action == "publish":
             final_text = apply_formatting(data)
@@ -294,7 +297,7 @@ def callback_handler(call):
             markup.add(InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}"))
             
             bot.edit_message_text(f"<b>معاينة قبل النشر:</b>\n\n{final_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
-            return bot.answer_callback_query(call.id, "جاهز للنشر")
+            return bot.answer_callback_query(call.id, text="جاهز للنشر", show_alert=False)
 
         else:
             if action == "bold": data["bold"] = not data["bold"]
@@ -304,7 +307,7 @@ def callback_handler(call):
             new_text = apply_formatting(data)
             markup = get_formatting_panel_markup(data, msg_id)
             bot.edit_message_text(f"معاينة النص:\n\n{new_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
-            return bot.answer_callback_query(call.id, "تم التحديث")
+            return bot.answer_callback_query(call.id, text="تم التحديث", show_alert=False)
 
     elif call.data.startswith("confirm_"):
         post_id = call.data.split("_")[1]
@@ -314,13 +317,12 @@ def callback_handler(call):
             if data['type'] == 'photo': bot.send_photo(CHANNEL_ID, data['file_id'], caption=data['caption'], parse_mode='HTML')
             else: bot.send_message(CHANNEL_ID, data['caption'], parse_mode='HTML')
             
-            bot.edit_message_text("<b>القائمة الرئيسية:</b>\n✅ تم النشر في القناة بنجاح.", 
-                                  chat_id=call.message.chat.id, 
-                                  message_id=call.message.message_id, 
-                                  reply_markup=get_main_panel(),
-                                  parse_mode='HTML')
+            try: bot.delete_message(call.message.chat.id, call.message.message_id)
+            except: pass
+            
+            bot.answer_callback_query(call.id, text="تم النشر في القناة", show_alert=False)
+            bot.send_message(call.message.chat.id, "<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", reply_markup=get_main_panel(), parse_mode='HTML')
             del pending_posts[post_id]
-            bot.answer_callback_query(call.id, text="تم النشر")
         except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}")
 
     elif call.data.startswith("schedule_"):
@@ -331,12 +333,12 @@ def callback_handler(call):
     elif call.data.startswith("cancel_"):
         post_id = call.data.split("_")[1]
         if post_id in pending_posts: del pending_posts[post_id]
-        bot.edit_message_text("<b>القائمة الرئيسية:</b>\n❌ تم إلغاء المنشور.", 
-                              chat_id=call.message.chat.id, 
-                              message_id=call.message.message_id, 
-                              reply_markup=get_main_panel(),
-                              parse_mode='HTML')
-        bot.answer_callback_query(call.id, text="تم الإلغاء")
+        
+        try: bot.delete_message(call.message.chat.id, call.message.message_id)
+        except: pass
+        
+        bot.answer_callback_query(call.id, text="تم إلغاء المنشور", show_alert=False)
+        bot.send_message(call.message.chat.id, "<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", reply_markup=get_main_panel(), parse_mode='HTML')
 
 # ================= 6. الدوال المساعدة =================
 def schedule_post(post_id, delay_minutes):
