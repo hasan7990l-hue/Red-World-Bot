@@ -11,7 +11,7 @@ import requests
 import pingrabber
 
 # ================= الإعدادات =================
-TELEGRAM_TOKEN = '8386513995:AAH6GWopP1_8jWCVZvUj_Yix1pjYNt_zGts'
+TELEGRAM_TOKEN = '8217717390:AAH5z6C5DRzT_qA_KNqDFFTkTV0hoVy2EGE'
 GROQ_API_KEY = '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'
 ADMIN_ID = 8456056018 
 
@@ -74,14 +74,13 @@ def send_force_sub_message(chat_id):
     )
     
     markup = InlineKeyboardMarkup(row_width=1)
-    # الروابط المباشرة للقناتين
     markup.add(InlineKeyboardButton("اشترك في القناة الأولى (@Eror_7)", url="https://t.me/Eror_7"))
     markup.add(InlineKeyboardButton("اشترك في القناة الثانية (@lb2_c)", url="https://t.me/lb2_c"))
     markup.add(InlineKeyboardButton("تحقق من الاشتراك ✅", callback_data="check_sub"))
     
     bot.send_message(chat_id, text, reply_markup=markup, parse_mode='HTML')
 
-# ================= 1. الترحيب (مع الفحص) =================
+# ================= 1. الترحيب =================
 @bot.message_handler(commands=['start', 'panel'])
 def send_welcome(message):
     user_id = message.from_user.id
