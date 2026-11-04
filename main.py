@@ -175,7 +175,7 @@ def send_welcome(message):
     welcome_text = "<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nهذه هي لوحة التحكم الرئيسية. اختر الإجراء الذي تريده من الأزرار أدناه."
     bot.send_message(message.chat.id, welcome_text, reply_markup=get_main_panel(), parse_mode='HTML')
 
-# ================= 5. معالجة الأزرار (تعديل الرسائل بدلاً من حذفها) =================
+# ================= 5. معالجة الأزرار =================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     if call.from_user.id != ADMIN_ID: return
@@ -256,7 +256,7 @@ def callback_handler(call):
             chat_completion = client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}], 
                 model="qwen/qwen3.8-27b",
-                max_tokens=500  # <--- إضافة الحد الأقصى
+                max_tokens=500
             )
             raw_text = chat_completion.choices[0].message.content.strip()
             msg_id = str(int(time.time()))
@@ -273,8 +273,11 @@ def callback_handler(call):
         data = generated_texts[msg_id]
 
         if action == "cancel":
-            bot.delete_message(call.message.chat.id, call.message.message_id)
-            bot.send_message(call.message.chat.id, "تم إلغاء العبارة.", reply_markup=get_main_panel())
+            bot.edit_message_text("<b>القائمة الرئيسية:</b>\nتم إلغاء العبارة وحذفها بنجاح.", 
+                                  chat_id=call.message.chat.id, 
+                                  message_id=call.message.message_id, 
+                                  reply_markup=get_main_panel(), 
+                                  parse_mode='HTML')
             return bot.answer_callback_query(call.id, text="تم الإلغاء")
 
         elif action == "copy":
@@ -310,8 +313,14 @@ def callback_handler(call):
         try:
             if data['type'] == 'photo': bot.send_photo(CHANNEL_ID, data['file_id'], caption=data['caption'], parse_mode='HTML')
             else: bot.send_message(CHANNEL_ID, data['caption'], parse_mode='HTML')
-            bot.edit_message_text("✅ تم النشر في القناة بنجاح.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+            
+            bot.edit_message_text("<b>القائمة الرئيسية:</b>\n✅ تم النشر في القناة بنجاح.", 
+                                  chat_id=call.message.chat.id, 
+                                  message_id=call.message.message_id, 
+                                  reply_markup=get_main_panel(),
+                                  parse_mode='HTML')
             del pending_posts[post_id]
+            bot.answer_callback_query(call.id, text="تم النشر")
         except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}")
 
     elif call.data.startswith("schedule_"):
@@ -322,7 +331,12 @@ def callback_handler(call):
     elif call.data.startswith("cancel_"):
         post_id = call.data.split("_")[1]
         if post_id in pending_posts: del pending_posts[post_id]
-        bot.edit_message_text("❌ تم إلغاء المنشور.", chat_id=call.message.chat.id, message_id=call.message.message_id)
+        bot.edit_message_text("<b>القائمة الرئيسية:</b>\n❌ تم إلغاء المنشور.", 
+                              chat_id=call.message.chat.id, 
+                              message_id=call.message.message_id, 
+                              reply_markup=get_main_panel(),
+                              parse_mode='HTML')
+        bot.answer_callback_query(call.id, text="تم الإلغاء")
 
 # ================= 6. الدوال المساعدة =================
 def schedule_post(post_id, delay_minutes):
@@ -362,7 +376,7 @@ def handle_photo(message):
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
             model="qwen/qwen3.8-27b",
-            max_tokens=500  # <--- إضافة الحد الأقصى
+            max_tokens=500
         )
         ai_text = chat_completion.choices[0].message.content.strip()
         final_caption = f"<b>{ai_text}</b>"
