@@ -1,4 +1,4 @@
 pyTelegramBotAPI
 groq
-yt-dlp
+ydpy
 requests
