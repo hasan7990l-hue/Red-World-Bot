@@ -227,7 +227,7 @@ def get_main_panel(user_id):
     markup.add(InlineKeyboardButton("مغادرة القناة (إلغاء الارتباط)", callback_data="leave_channel"))
     return markup
 
-# ================= 6. نظام حقوق النشر الصوتي =================
+# ================= 6. نظام حقوق النشر الصوتي (المنفصل) =================
 @bot.callback_query_handler(func=lambda call: call.data == "start_audio_edit")
 def start_audio_edit(call):
     user_id = call.from_user.id
@@ -295,10 +295,19 @@ def handle_audio_merge(message):
             audio.save(audio_buffer)
             audio_buffer.seek(0)
             
-            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("قناة عالم الأحمر | Red world", url="https://t.me/Eror_7"))
-            bot.send_audio(message.chat.id, audio_buffer, title="Red world | عالم الأحمر", performer="@Eror_7", reply_markup=markup)
+            markup = InlineKeyboardMarkup()
+            markup.add(InlineKeyboardButton("نشر في القناة", callback_data=f"publish_standalone_audio_{user_id}"))
+            
+            audio_edit_state[user_id]['audio_buffer'] = audio_buffer
+            
             bot.delete_message(message.chat.id, msg_loading.message_id)
-            del audio_edit_state[user_id]
+            bot.send_audio(
+                message.chat.id, 
+                audio_buffer, 
+                title="Red world | عالم الأحمر", 
+                performer="@Eror_7", 
+                reply_markup=markup
+            )
         except Exception as e:
             bot.delete_message(message.chat.id, msg_loading.message_id)
             bot.send_message(message.chat.id, f"❌ حدث خطأ: {e}")
@@ -356,7 +365,40 @@ def handle_audio_merge(message):
             bot.send_message(message.chat.id, f"❌ حدث خطأ: {e}")
         return
 
-# ================= 8. نشر/إلغاء الصوت المدمج =================
+# ================= 8. نشر/إلغاء الصوت =================
+@bot.callback_query_handler(func=lambda call: call.data.startswith("publish_standalone_audio_"))
+def publish_standalone_audio(call):
+    user_id = int(call.data.split("_")[3])
+    if user_id not in audio_edit_state or 'audio_buffer' not in audio_edit_state[user_id]:
+        return bot.answer_callback_query(call.id, "انتهت الصلاحية.", show_alert=True)
+    
+    data = audio_edit_state[user_id]
+    target_channel = user_channels.get(str(user_id))
+    
+    if not target_channel:
+        return bot.answer_callback_query(call.id, "⚠️ القناة غير مرتبطة. يرجى التحقق من الرفع.", show_alert=True)
+    
+    audio_buffer = data['audio_buffer']
+    audio_buffer.seek(0)
+    
+    try:
+        bot.send_audio(
+            target_channel, 
+            audio_buffer, 
+            title="Red world | عالم الأحمر", 
+            performer="@Eror_7"
+        )
+        stats["published_count"] += 1
+        save_json(STATS_FILE, stats)
+        
+        bot.answer_callback_query(call.id, "✅ تم النشر في القناة بنجاح!", show_alert=True)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        del audio_edit_state[user_id]
+        
+        bot.send_message(call.message.chat.id, "<b>مرحباً بك في لوحة التحكم</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(user_id), parse_mode='HTML')
+    except Exception as e:
+        bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("publish_audio_"))
 def publish_audio(call):
     user_id = int(call.data.split("_")[2])
@@ -473,7 +515,6 @@ def callback_handler(call):
             pending_posts[new_post_id] = {'type': 'photo', 'file_id': photo_id, 'caption': final_caption, 'channel': target_channel}
             saved_images[new_post_id] = data 
             
-            # هنا أضفنا زر إضافة ملف صوتي في المعاينة الجديدة
             markup = InlineKeyboardMarkup(row_width=2).add(
                 InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{new_post_id}"), 
                 InlineKeyboardButton("جدولة", callback_data=f"schedule_{new_post_id}"), 
@@ -772,7 +813,6 @@ def process_single_photo(message, settings, target_channel):
             'channel': target_channel
         }
         
-        # هنا أضفنا زر إضافة ملف صوتي في المعاينة الأولى
         markup = InlineKeyboardMarkup(row_width=2).add(
             InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
             InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
