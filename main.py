@@ -57,12 +57,10 @@ def check_subscription(user_id):
             if member.status not in ['member', 'administrator', 'creator']:
                 return False
         except Exception:
-            # إذا فشل الفحص (البوت ليس مشرفاً أو القناة خاطئة)، نعتبره غير مشترك
             return False
     return True
 
 def send_force_sub_message(chat_id):
-    # كليشة عربية فخمة
     text = (
         "<b>⟨ بوابة عالم الأحمر ⟩</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
@@ -87,7 +85,6 @@ def send_force_sub_message(chat_id):
 def send_welcome(message):
     user_id = message.from_user.id
     
-    # فحص الاشتراك الإجباري (تجاوز الفحص للمالك فقط)
     if user_id != ADMIN_ID and not check_subscription(user_id):
         return send_force_sub_message(message.chat.id)
 
@@ -288,7 +285,6 @@ def fetch_pinterest(call):
 def callback_handler(call):
     user_id = call.from_user.id
     
-    # القفل الأمني (التحقق من رفع البوت)
     if user_id != ADMIN_ID and str(user_id) not in user_channels:
         if call.data not in ["verify_channel", "main_menu", "check_sub"]:
             return bot.answer_callback_query(call.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً لتتمكن من استخدام الأزرار.", show_alert=True)
