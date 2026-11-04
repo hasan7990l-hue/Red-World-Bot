@@ -181,21 +181,27 @@ def callback_handler(call):
     if call.from_user.id != ADMIN_ID: return
 
     if call.data == "main_menu":
-        bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", 
-                              chat_id=call.message.chat.id, 
-                              message_id=call.message.message_id, 
-                              reply_markup=get_main_panel(), 
-                              parse_mode='HTML')
+        # التعديل ليعمل سواء كانت الرسالة نصية أو صورة
+        if call.message.content_type == 'photo':
+            try: bot.delete_message(call.message.chat.id, call.message.message_id)
+            except: pass
+            bot.send_message(call.message.chat.id, "<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", reply_markup=get_main_panel(), parse_mode='HTML')
+        else:
+            bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", 
+                                  chat_id=call.message.chat.id, 
+                                  message_id=call.message.message_id, 
+                                  reply_markup=get_main_panel(), 
+                                  parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
     elif call.data == "toggle_status":
         settings["status"] = "OFF" if settings["status"] == "ON" else "ON"
-        bot.edit_message_text("‎", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel())
+        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"حالة النشر: {'مفعل' if settings['status'] == 'ON' else 'معطل'}", show_alert=False)
 
     elif call.data == "toggle_text_mode":
         settings["text_only_mode"] = not settings["text_only_mode"]
-        bot.edit_message_text("‎", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel())
+        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"النشر النصي: {'مفعل' if settings['text_only_mode'] else 'معطل'}", show_alert=False)
 
     elif call.data == "menu_lang":
@@ -216,7 +222,7 @@ def callback_handler(call):
         bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id, text=f"تم اختيار الفئة: {settings['category']}", show_alert=False)
 
-    # --- تحديث السورس لجلب صورة القناة ---
+    # السورس
     elif call.data == "show_source":
         try:
             dev_info = bot.get_chat(ADMIN_ID)
@@ -224,7 +230,6 @@ def callback_handler(call):
         except:
             dev_name = "المطور"
 
-        # حذف الرسالة القديمة (القائمة الرئيسية) لإفراغ الشاشة
         try: bot.delete_message(call.message.chat.id, call.message.message_id)
         except: pass
 
@@ -242,7 +247,6 @@ def callback_handler(call):
         )
         
         try:
-            # جلب صورة القناة
             chat_info = bot.get_chat(CHANNEL_ID)
             if chat_info.photo:
                 file_info = bot.get_file(chat_info.photo.big_file_id)
