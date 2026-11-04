@@ -312,13 +312,13 @@ def callback_handler(call):
             bot.edit_message_text(f"معاينة النص:\n\n{new_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
             return bot.answer_callback_query(call.id, text="تم التحديث", show_alert=False)
 
-    # 8. البحث عن أغنية (أجنبية / موسيقى تصويرية)
+    # 8. البحث عن أغنية (حصرياً من قنوات Brutal Bikes و Toronto Remix)
     elif call.data.startswith("find_song_"):
         post_id = call.data.split("_")[2]
         if post_id not in saved_images: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
         
-        bot.answer_callback_query(call.id, text="جاري البحث عن أغنية أجنبية تناسب الصورة...", show_alert=False)
-        msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحليل الصورة واقتراح أغنية أجنبية...")
+        bot.answer_callback_query(call.id, text="جاري البحث في قنوات Brutal Bikes و Toronto...", show_alert=False)
+        msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحليل الصورة واقتراح أغنية من القنوات المحددة...")
         
         try:
             file_info = bot.get_file(saved_images[post_id])
@@ -326,10 +326,18 @@ def callback_handler(call):
             base64_image = base64.b64encode(downloaded_file).decode('utf-8')
             
             prompt = (
-                "Look at this image and suggest ONE song that perfectly matches its mood and atmosphere. "
-                "The song MUST be in English (Foreign song) or an instrumental/cinematic soundtrack. "
-                "Do NOT suggest Arabic songs. "
-                "Write the song name and the artist name only, nothing else."
+                "Look at this image and suggest ONE song that matches its mood. "
+                "You MUST choose ONLY from the following list of songs/artists (which are from the Brutal Bikes and Toronto Remix YouTube channels): "
+                "- Night Lovell (e.g., Concept Nothing) "
+                "- Kaan Avşar - Big Bang "
+                "- Baris Cakir - DARKLIGHT "
+                "- Skrillex "
+                "- Satsuma Music "
+                "- Praddus "
+                "- Diadalos "
+                "- Any Phonk or Electronic Remix (Toronto Remix style). "
+                "Do NOT suggest any Arabic songs. "
+                "Write ONLY the song name and artist, nothing else."
             )
             
             chat_completion = client.chat.completions.create(
@@ -340,7 +348,7 @@ def callback_handler(call):
             song_suggestion = chat_completion.choices[0].message.content.strip()
             
             bot.delete_message(call.message.chat.id, msg_loading.message_id)
-            bot.send_message(call.message.chat.id, f"<b>🎵 الأغنية المقترحة:</b>\n\n{song_suggestion}", parse_mode='HTML')
+            bot.send_message(call.message.chat.id, f"<b>🎵 الأغنية المقترحة (من القنوات المحددة):</b>\n\n{song_suggestion}", parse_mode='HTML')
             
         except Exception as e:
             bot.delete_message(call.message.chat.id, msg_loading.message_id)
