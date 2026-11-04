@@ -8,9 +8,9 @@ import threading
 
 # ================= الإعدادات =================
 TELEGRAM_TOKEN = '8386513995:AAH6GWopP1_8jWCVZvUj_Yix1pjYNt_zGts'
-GROQ_API_KEY = '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' 
+GROQ_API_KEY = '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'
 CHANNEL_ID = '@Eror_7'
-ADMIN_ID = 8456056018 # <--- ضع ايديك هنا
+ADMIN_ID = 8456056018 
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
@@ -180,7 +180,6 @@ def send_welcome(message):
 def callback_handler(call):
     if call.from_user.id != ADMIN_ID: return
 
-    # 1. زر الرجوع للقائمة الرئيسية
     if call.data == "main_menu":
         bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", 
                               chat_id=call.message.chat.id, 
@@ -189,7 +188,6 @@ def callback_handler(call):
                               parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
-    # 2. التفعيل والتعطيل
     elif call.data == "toggle_status":
         settings["status"] = "OFF" if settings["status"] == "ON" else "ON"
         bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
@@ -200,7 +198,6 @@ def callback_handler(call):
         bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"وضع النشر النصي: {'مفعل' if settings['text_only_mode'] else 'معطل'}")
 
-    # 3. اللغات
     elif call.data == "menu_lang":
         text = "<b>إعدادات اللغة:</b>\n\nهذا الزر يحدد لغة العبارات التي سيولدها الذكاء الاصطناعي (عربي، إنجليزي، أو خليط بينهما)."
         bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_lang_panel(), parse_mode='HTML')
@@ -215,7 +212,6 @@ def callback_handler(call):
                               parse_mode='HTML')
         return bot.answer_callback_query(call.id, text="تم التحديث")
 
-    # 4. الفئات
     elif call.data == "menu_categories":
         text = "<b>فئات العبارات:</b>\n\nهذا الزر يحدد (أسلوب) النص الذي سيكتبه البوت. اختر الفئة التي تناسب جو القناة."
         bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_categories_panel(), parse_mode='HTML')
@@ -230,7 +226,6 @@ def callback_handler(call):
                               parse_mode='HTML')
         return bot.answer_callback_query(call.id, text="تم التحديث")
 
-    # 5. السورس
     elif call.data == "show_source":
         try:
             dev_info = bot.get_chat(ADMIN_ID)
@@ -253,13 +248,16 @@ def callback_handler(call):
         bot.edit_message_text(source_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
         return bot.answer_callback_query(call.id, text="معلومات السورس")
 
-    # 6. توليد العبارة
     elif call.data == "generate_text":
         bot.answer_callback_query(call.id, text="جاري التوليد...")
         lang_prompt = f"باللغة {settings['language']}" if settings['language'] != "مختلط" else "مزيج بين العربية والإنجليزية"
         prompt = f"اكتب عبارة قصيرة جداً بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها عالم الأحمر. بدون إيموجي."
         try:
-            chat_completion = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model="qwen/qwen3.8-27b")
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}], 
+                model="qwen/qwen3.8-27b",
+                max_tokens=500  # <--- إضافة الحد الأقصى
+            )
             raw_text = chat_completion.choices[0].message.content.strip()
             msg_id = str(int(time.time()))
             generated_texts[msg_id] = {"raw": raw_text, "bold": False, "italic": False, "strike": False, "quote": False}
@@ -268,7 +266,6 @@ def callback_handler(call):
         except Exception as e:
             bot.send_message(call.message.chat.id, f"خطأ: {e}")
 
-    # 7. أزرار التنسيق
     elif call.data.startswith('fmt_'):
         parts = call.data.split('_')
         action, msg_id = parts[1], parts[2]
@@ -306,48 +303,6 @@ def callback_handler(call):
             bot.edit_message_text(f"معاينة النص:\n\n{new_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
             return bot.answer_callback_query(call.id, "تم التحديث")
 
-    # 8. الفحص الذكي
-    elif call.data == "check_bot_status":
-        try:
-            test_msg = bot.send_message(CHANNEL_ID, "System Check...")
-            bot.delete_message(CHANNEL_ID, test_msg.message_id)
-            
-            success_text = (
-                f"<b>⟨ نتيجة الفحص ⟩</b>\n"
-                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-                f"<blockquote>"
-                f"<b>الحالة:</b> ✅ ناجح\n"
-                f"<b>الاتصال:</b> البوت مرفوع ومشرف في القناة.\n"
-                f"<b>الصلاحيات:</b> يمتلك صلاحية النشر.\n"
-                f"</blockquote>\n"
-                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-                f"<i>يمكنك الآن استخدام لوحة التحكم لإدارة القناة.</i>"
-            )
-            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("فتح القائمة الرئيسية", callback_data="main_menu"))
-            bot.edit_message_text(success_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
-            bot.answer_callback_query(call.id, "✅ البوت يعمل بنجاح!")
-
-        except Exception as e:
-            error_text = (
-                f"<b>⟨ نتيجة الفحص ⟩</b>\n"
-                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-                f"<blockquote>"
-                f"<b>الحالة:</b> ❌ فشل\n"
-                f"<b>السبب:</b> البوت ليس مشرفاً في القناة أو تم طرده.\n"
-                f"</blockquote>\n"
-                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-                f"<i>يرجى رفع البوت كمشرف وإعطائه صلاحية 'نشر الرسائل' ثم إعادة الفحص.</i>"
-            )
-            markup = InlineKeyboardMarkup(row_width=1)
-            markup.add(
-                InlineKeyboardButton("إعادة الفحص", callback_data="check_bot_status"),
-                InlineKeyboardButton("إضافة البوت للقناة", url=f"https://t.me/{bot.get_me().username}?startchannel=true"),
-                InlineKeyboardButton("رجوع للقائمة", callback_data="main_menu")
-            )
-            bot.edit_message_text(error_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
-            bot.answer_callback_query(call.id, "❌ فشل الفحص.")
-
-    # 9. المعاينة
     elif call.data.startswith("confirm_"):
         post_id = call.data.split("_")[1]
         if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
@@ -407,6 +362,7 @@ def handle_photo(message):
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
             model="qwen/qwen3.8-27b",
+            max_tokens=500  # <--- إضافة الحد الأقصى
         )
         ai_text = chat_completion.choices[0].message.content.strip()
         final_caption = f"<b>{ai_text}</b>"
