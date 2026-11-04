@@ -180,49 +180,52 @@ def send_welcome(message):
 def callback_handler(call):
     if call.from_user.id != ADMIN_ID: return
 
+    # 1. زر الرجوع للقائمة (يعيد نفس الرسالة لتصبح القائمة الرئيسية بدون حذف أو إرسال جديد)
     if call.data == "main_menu":
-        # التعديل ليعمل سواء كانت الرسالة نصية أو صورة
+        main_text = "<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nاختر الإجراء الذي تريده:"
+        
+        # إذا كانت الرسالة الحالية تحتوي على صورة (السورس)، لا يمكن تعديلها لنص، لذا نحذفها ونرسل القائمة
         if call.message.content_type == 'photo':
             try: bot.delete_message(call.message.chat.id, call.message.message_id)
             except: pass
-            bot.send_message(call.message.chat.id, "<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", reply_markup=get_main_panel(), parse_mode='HTML')
+            bot.send_message(call.message.chat.id, main_text, reply_markup=get_main_panel(), parse_mode='HTML')
         else:
-            bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", 
-                                  chat_id=call.message.chat.id, 
-                                  message_id=call.message.message_id, 
-                                  reply_markup=get_main_panel(), 
-                                  parse_mode='HTML')
+            # إذا كانت نصية، نعدلها في مكانها
+            bot.edit_message_text(main_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
+    # 2. التفعيل والتعطيل (تحديث الأزرار فقط مع مسافة خفية)
     elif call.data == "toggle_status":
         settings["status"] = "OFF" if settings["status"] == "ON" else "ON"
-        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
+        bot.edit_message_text("‎", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"حالة النشر: {'مفعل' if settings['status'] == 'ON' else 'معطل'}", show_alert=False)
 
     elif call.data == "toggle_text_mode":
         settings["text_only_mode"] = not settings["text_only_mode"]
-        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
+        bot.edit_message_text("‎", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"النشر النصي: {'مفعل' if settings['text_only_mode'] else 'معطل'}", show_alert=False)
 
+    # 3. اللغة (تعديل النص والأزرار في نفس الرسالة)
     elif call.data == "menu_lang":
         bot.edit_message_text("<b>إعدادات اللغة:</b>\n\nاختر اللغة التي تريدها:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_lang_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
     elif call.data.startswith("lang_"):
         settings["language"] = call.data.replace("lang_", "")
-        bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(), parse_mode='HTML')
+        bot.edit_message_text("<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nاختر الإجراء الذي تريده:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id, text=f"تم اختيار اللغة: {settings['language']}", show_alert=False)
 
+    # 4. الفئات (تعديل النص والأزرار في نفس الرسالة)
     elif call.data == "menu_categories":
         bot.edit_message_text("<b>فئات العبارات:</b>\n\nاختر الفئة التي تناسب جو القناة:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_categories_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
     elif call.data.startswith("cat_"):
         settings["category"] = call.data.replace("cat_", "")
-        bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(), parse_mode='HTML')
+        bot.edit_message_text("<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nاختر الإجراء الذي تريده:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id, text=f"تم اختيار الفئة: {settings['category']}", show_alert=False)
 
-    # السورس
+    # 5. السورس (صورة + كليشة)
     elif call.data == "show_source":
         try:
             dev_info = bot.get_chat(ADMIN_ID)
@@ -259,6 +262,7 @@ def callback_handler(call):
             
         return bot.answer_callback_query(call.id)
 
+    # 6. توليد العبارة
     elif call.data == "generate_text":
         bot.answer_callback_query(call.id, text="جاري التوليد...", show_alert=False)
         lang_prompt = f"باللغة {settings['language']}" if settings['language'] != "مختلط" else "مزيج بين العربية والإنجليزية"
@@ -277,6 +281,7 @@ def callback_handler(call):
         except Exception as e:
             bot.send_message(call.message.chat.id, f"خطأ: {e}")
 
+    # 7. أزرار التنسيق
     elif call.data.startswith('fmt_'):
         parts = call.data.split('_')
         action, msg_id = parts[1], parts[2]
@@ -287,7 +292,7 @@ def callback_handler(call):
             try: bot.delete_message(call.message.chat.id, call.message.message_id)
             except: pass
             bot.answer_callback_query(call.id, text="تم إلغاء العبارة وحذفها", show_alert=False)
-            bot.send_message(call.message.chat.id, "<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", reply_markup=get_main_panel(), parse_mode='HTML')
+            bot.send_message(call.message.chat.id, "<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(), parse_mode='HTML')
             return
 
         elif action == "copy":
@@ -316,6 +321,7 @@ def callback_handler(call):
             bot.edit_message_text(f"معاينة النص:\n\n{new_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
             return bot.answer_callback_query(call.id, text="تم التحديث", show_alert=False)
 
+    # 8. تأكيد النشر
     elif call.data.startswith("confirm_"):
         post_id = call.data.split("_")[1]
         if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
@@ -328,7 +334,7 @@ def callback_handler(call):
             except: pass
             
             bot.answer_callback_query(call.id, text="تم النشر في القناة", show_alert=False)
-            bot.send_message(call.message.chat.id, "<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", reply_markup=get_main_panel(), parse_mode='HTML')
+            bot.send_message(call.message.chat.id, "<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(), parse_mode='HTML')
             del pending_posts[post_id]
         except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}")
 
@@ -345,7 +351,7 @@ def callback_handler(call):
         except: pass
         
         bot.answer_callback_query(call.id, text="تم إلغاء المنشور", show_alert=False)
-        bot.send_message(call.message.chat.id, "<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", reply_markup=get_main_panel(), parse_mode='HTML')
+        bot.send_message(call.message.chat.id, "<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(), parse_mode='HTML')
 
 # ================= 6. الدوال المساعدة =================
 def schedule_post(post_id, delay_minutes):
