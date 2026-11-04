@@ -74,6 +74,7 @@ def send_force_sub_message(chat_id):
     )
     
     markup = InlineKeyboardMarkup(row_width=1)
+    # الروابط المباشرة للقناتين
     markup.add(InlineKeyboardButton("اشترك في القناة الأولى (@Eror_7)", url="https://t.me/Eror_7"))
     markup.add(InlineKeyboardButton("اشترك في القناة الثانية (@lb2_c)", url="https://t.me/lb2_c"))
     markup.add(InlineKeyboardButton("تحقق من الاشتراك ✅", callback_data="check_sub"))
