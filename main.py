@@ -71,13 +71,15 @@ def send_welcome(message):
 
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='HTML')
 
-# ================= 2. التحقق المزدوج =================
+# ================= 2. التحقق المزدوج (بدون أخطاء) =================
 @bot.callback_query_handler(func=lambda call: call.data == "verify_channel")
 def verify_channel(call):
+    # إغلاق التنبيه فوراً لمنع خطأ (query is too old)
+    bot.answer_callback_query(call.id, "جاري الفحص...")
+    
     user_id = call.from_user.id
     channel_id = user_channels.get(str(user_id))
     
-    # إذا لم يجد البوت القناة، يعرض عليه خيار الإدخال اليدوي
     if not channel_id:
         msg = bot.send_message(call.message.chat.id, "⚠️ لم نتمكن من العثور على القناة تلقائياً.\n\nيرجى إرسال معرف القناة (مثال: @Eror_7):")
         bot.register_next_step_handler(msg, manual_verify, user_id)
@@ -90,7 +92,6 @@ def manual_verify(message, user_id):
     if not channel_input.startswith('@'):
         channel_input = '@' + channel_input
     
-    # حفظ القناة يدوياً
     user_channels[str(user_id)] = channel_input
     save_db(user_channels)
     
@@ -114,12 +115,11 @@ def perform_verification(chat_id, user_id, channel_id):
             )
             markup = InlineKeyboardMarkup().add(InlineKeyboardButton("فتح لوحة التحكم", callback_data="main_menu"))
             bot.edit_message_text(success_text, chat_id=chat_id, message_id=msg_loading.message_id, reply_markup=markup, parse_mode='HTML')
-            bot.answer_callback_query(msg_loading.message_id, "✅ تم التحقق بنجاح!")
         else:
             bot.edit_message_text("❌ البوت موجود في القناة، لكنه لا يملك صلاحية 'نشر الرسائل'. يرجى تعديل صلاحيات البوت في القناة والمحاولة مرة أخرى.", chat_id=chat_id, message_id=msg_loading.message_id)
             
     except Exception as e:
-        bot.edit_message_text(f"❌ حدث خطأ: {e}\nتأكد من أن البوت مشرف في القناة.", chat_id=chat_id, message_id=msg_loading.message_id)
+        bot.edit_message_text(f"❌ حدث خطأ: {e}\nتأكد من أن البوت مشرف في القناة ومن صحة المعرف.", chat_id=chat_id, message_id=msg_loading.message_id)
 
 # ================= 3. حفظ القناة تلقائياً عند إضافتها =================
 @bot.message_handler(content_types=['new_chat_members'])
