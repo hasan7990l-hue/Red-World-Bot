@@ -25,8 +25,9 @@ client = Groq(api_key=GROQ_API_KEY)
 DB_FILE = "user_channels.json"
 STATS_FILE = "stats.json"
 
-# متغيرات لحفظ الحالة مؤقتاً لميزة حقوق النشر
-audio_edit_state = {} 
+# متغيرات لحفظ الحالة مؤقتاً
+audio_edit_state = {} # لحقوق النشر
+pending_audio_merge = {} # لدمج الصورة مع الصوت
 
 def load_json(file):
     if os.path.exists(file):
@@ -226,7 +227,7 @@ def get_main_panel(user_id):
     markup.add(InlineKeyboardButton("مغادرة القناة (إلغاء الارتباط)", callback_data="leave_channel"))
     return markup
 
-# ================= 6. نظام حقوق النشر الصوتي =================
+# ================= 6. نظام حقوق النشر الصوتي (المنفصل) =================
 @bot.callback_query_handler(func=lambda call: call.data == "start_audio_edit")
 def start_audio_edit(call):
     user_id = call.from_user.id
@@ -241,91 +242,165 @@ def start_audio_edit(call):
         parse_mode='HTML'
     )
 
-@bot.message_handler(content_types=['photo'])
-def handle_audio_cover(message):
-    user_id = message.from_user.id
-    if user_id in audio_edit_state and audio_edit_state[user_id]['step'] == 'waiting_for_cover':
-        # حفظ الصورة في الذاكرة
-        file_info = bot.get_file(message.photo[-1].file_id)
-        downloaded_file = bot.download_file(file_info.file_path)
-        
-        audio_edit_state[user_id]['cover_data'] = downloaded_file
-        audio_edit_state[user_id]['step'] = 'waiting_for_audio'
-        
-        bot.send_message(message.chat.id, "<b>الخطوة 2:</b> الآن أرسل ملف الصوت (MP3) الذي تريد تعديل حقوقه:", parse_mode='HTML')
-        return
+# ================= 7. دمج الصورة مع الصوت (النظام الجديد) =================
+@bot.callback_query_handler(func=lambda call: call.data.startswith("add_audio_to_post_"))
+def add_audio_to_post(call):
+    post_id = call.data.split("_")[4]
+    if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية", show_alert=True)
+    
+    user_id = call.from_user.id
+    pending_audio_merge[user_id] = {
+        'post_id': post_id,
+        'photo_id': pending_posts[post_id]['file_id'],
+        'caption': pending_posts[post_id]['caption'],
+        'channel': pending_posts[post_id]['channel']
+    }
+    
+    bot.answer_callback_query(call.id)
+    bot.edit_message_text(
+        "<b>⟨ إضافة ملف صوتي ⟩</b>\n\n"
+        "أرسل ملف الصوت (MP3) الآن، وسأقوم بتعيين الصورة كغلاف له وتغيير حقوقه:",
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        parse_mode='HTML'
+    )
 
 @bot.message_handler(content_types=['audio', 'document'])
-def handle_audio_file(message):
+def handle_audio_merge(message):
     user_id = message.from_user.id
+    
+    # حالة 1: تعديل صوتي منفصل
     if user_id in audio_edit_state and audio_edit_state[user_id]['step'] == 'waiting_for_audio':
         file_id = None
-        if message.content_type == 'audio':
-            file_id = message.audio.file_id
-        elif message.content_type == 'document' and message.document.mime_type == 'audio/mpeg':
-            file_id = message.document.file_id
+        if message.content_type == 'audio': file_id = message.audio.file_id
+        elif message.content_type == 'document' and message.document.mime_type == 'audio/mpeg': file_id = message.document.file_id
         
-        if not file_id:
-            return bot.reply_to(message, "❌ يرجى إرسال ملف بصيغة MP3 فقط.")
-
+        if not file_id: return bot.reply_to(message, "❌ يرجى إرسال ملف بصيغة MP3.")
+        
         msg_loading = bot.send_message(message.chat.id, "⏳ جاري معالجة الملف وإضافة الحقوق...")
+        try:
+            file_info = bot.get_file(file_id)
+            audio_data = bot.download_file(file_info.file_path)
+            audio_buffer = io.BytesIO(audio_data)
+            audio = MP3(audio_buffer, ID3=ID3)
+            try: audio.add_tags()
+            except ID3Error: pass
+
+            audio.tags.add(TIT2(encoding=3, text="Red world | عالم الأحمر"))
+            audio.tags.add(TPE1(encoding=3, text="@Eror_7"))
+            
+            cover_data = audio_edit_state[user_id]['cover_data']
+            audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=cover_data))
+            
+            audio.save(audio_buffer)
+            audio_buffer.seek(0)
+            
+            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("قناة عالم الأحمر | Red world", url="https://t.me/Eror_7"))
+            bot.send_audio(message.chat.id, audio_buffer, title="Red world | عالم الأحمر", performer="@Eror_7", reply_markup=markup)
+            bot.delete_message(message.chat.id, msg_loading.message_id)
+            del audio_edit_state[user_id]
+        except Exception as e:
+            bot.delete_message(message.chat.id, msg_loading.message_id)
+            bot.send_message(message.chat.id, f"❌ حدث خطأ: {e}")
+        return
+
+    # حالة 2: دمج الصورة مع الصوت في منشور واحد
+    if user_id in pending_audio_merge:
+        data = pending_audio_merge[user_id]
+        file_id = None
+        if message.content_type == 'audio': file_id = message.audio.file_id
+        elif message.content_type == 'document' and message.document.mime_type == 'audio/mpeg': file_id = message.document.file_id
         
+        if not file_id: return bot.reply_to(message, "❌ يرجى إرسال ملف بصيغة MP3.")
+        
+        msg_loading = bot.send_message(message.chat.id, "⏳ جاري معالجة الملف ودمجه مع الصورة...")
         try:
             # تحميل الملف الصوتي
             file_info = bot.get_file(file_id)
             audio_data = bot.download_file(file_info.file_path)
             
-            # معالجة الملف بالكامل في الذاكرة
+            # تحميل الصورة كغلاف
+            photo_file_info = bot.get_file(data['photo_id'])
+            photo_data = bot.download_file(photo_file_info.file_path)
+            
             audio_buffer = io.BytesIO(audio_data)
             audio = MP3(audio_buffer, ID3=ID3)
+            try: audio.add_tags()
+            except ID3Error: pass
 
-            # إضافة ID3 إذا لم يكن موجوداً
-            try:
-                audio.add_tags()
-            except ID3Error:
-                pass
-
-            # تعديل البيانات الوصفية
             audio.tags.add(TIT2(encoding=3, text="Red world | عالم الأحمر"))
             audio.tags.add(TPE1(encoding=3, text="@Eror_7"))
-            
-            # إضافة الصورة كغلاف
-            cover_data = audio_edit_state[user_id]['cover_data']
-            audio.tags.add(
-                APIC(
-                    encoding=3, # 3 is for utf-8
-                    mime='image/jpeg', # image/jpeg or image/png
-                    type=3, # 3 is for the cover image
-                    desc='Cover',
-                    data=cover_data
-                )
-            )
+            audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=photo_data))
             
             audio.save(audio_buffer)
             audio_buffer.seek(0)
 
-            # إرسال الملف المعدل مع زر القناة
-            markup = InlineKeyboardMarkup()
-            markup.add(InlineKeyboardButton("قناة عالم الأحمر | Red world", url="https://t.me/Eror_7"))
+            # إرسال المعاينة النهائية (صوت + نص)
+            markup = InlineKeyboardMarkup(row_width=2).add(
+                InlineKeyboardButton("نشر في القناة", callback_data=f"publish_audio_{user_id}"),
+                InlineKeyboardButton("إلغاء", callback_data=f"cancel_audio_{user_id}")
+            )
             
+            # نحفظ الملف في الذاكرة لنشره لاحقاً
+            pending_audio_merge[user_id]['audio_buffer'] = audio_buffer
+            
+            bot.delete_message(message.chat.id, msg_loading.message_id)
             bot.send_audio(
                 message.chat.id, 
                 audio_buffer, 
                 title="Red world | عالم الأحمر", 
                 performer="@Eror_7",
+                caption=data['caption'],
+                parse_mode='HTML',
                 reply_markup=markup
             )
             
-            bot.delete_message(message.chat.id, msg_loading.message_id)
-            
-            # مسح الحالة
-            del audio_edit_state[user_id]
-            
         except Exception as e:
             bot.delete_message(message.chat.id, msg_loading.message_id)
-            bot.send_message(message.chat.id, f"❌ حدث خطأ أثناء المعالجة: {e}")
+            bot.send_message(message.chat.id, f"❌ حدث خطأ: {e}")
+        return
 
-# ================= 7. التقرير الأسبوعي =================
+# ================= 8. نشر/إلغاء الصوت المدمج =================
+@bot.callback_query_handler(func=lambda call: call.data.startswith("publish_audio_"))
+def publish_audio(call):
+    user_id = int(call.data.split("_")[2])
+    if user_id not in pending_audio_merge: return bot.answer_callback_query(call.id, "انتهت الصلاحية.")
+    
+    data = pending_audio_merge[user_id]
+    audio_buffer = data['audio_buffer']
+    audio_buffer.seek(0)
+    
+    try:
+        bot.send_audio(
+            data['channel'], 
+            audio_buffer, 
+            title="Red world | عالم الأحمر", 
+            performer="@Eror_7",
+            caption=data['caption'],
+            parse_mode='HTML'
+        )
+        stats["published_count"] += 1
+        save_json(STATS_FILE, stats)
+        
+        bot.answer_callback_query(call.id, "✅ تم النشر بنجاح!", show_alert=True)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        del pending_audio_merge[user_id]
+        
+        if data['post_id'] in pending_posts: del pending_posts[data['post_id']]
+        
+        bot.send_message(call.message.chat.id, "<b>مرحباً بك في لوحة التحكم</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(user_id), parse_mode='HTML')
+    except Exception as e:
+        bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("cancel_audio_"))
+def cancel_audio(call):
+    user_id = int(call.data.split("_")[2])
+    if user_id in pending_audio_merge:
+        del pending_audio_merge[user_id]
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+    bot.answer_callback_query(call.id, "تم الإلغاء.")
+
+# ================= 9. التقرير الأسبوعي =================
 @bot.callback_query_handler(func=lambda call: call.data == "show_stats")
 def show_stats(call):
     channel_id = user_channels.get(str(call.from_user.id))
@@ -350,7 +425,7 @@ def show_stats(call):
         bot.answer_callback_query(call.id, f"خطأ في جلب الإحصائيات: {e}", show_alert=True)
     return bot.answer_callback_query(call.id)
 
-# ================= 8. القفل الأمني والأزرار =================
+# ================= 10. القفل الأمني والأزرار =================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.from_user.id
@@ -406,6 +481,7 @@ def callback_handler(call):
                 InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{new_post_id}"), 
                 InlineKeyboardButton("جدولة", callback_data=f"schedule_{new_post_id}"), 
                 InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_image_{new_post_id}"),
+                InlineKeyboardButton("إضافة ملف صوتي", callback_data=f"add_audio_to_post_{new_post_id}"),
                 InlineKeyboardButton("إلغاء", callback_data=f"cancel_{new_post_id}")
             )
             
@@ -566,14 +642,18 @@ def callback_handler(call):
         bot.answer_callback_query(call.id, text="تم إلغاء المنشور", show_alert=False)
         bot.send_message(call.message.chat.id, "<b>مرحباً بك في لوحة التحكم</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(user_id), parse_mode='HTML')
 
-# ================= 9. استقبال الصور (مع نظام الألبوم) =================
+# ================= 11. استقبال الصور (مع نظام الألبوم) =================
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
     
-    # التحقق إذا كان المستخدم في وضع تعديل الصوت
-    if user_id in audio_edit_state:
-        return # سيتم معالجتها في دالة handle_audio_cover
+    if user_id in audio_edit_state and audio_edit_state[user_id]['step'] == 'waiting_for_cover':
+        file_info = bot.get_file(message.photo[-1].file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        audio_edit_state[user_id]['cover_data'] = downloaded_file
+        audio_edit_state[user_id]['step'] = 'waiting_for_audio'
+        bot.send_message(message.chat.id, "<b>الخطوة 2:</b> الآن أرسل ملف الصوت (MP3) الذي تريد تعديل حقوقه:", parse_mode='HTML')
+        return
 
     if user_id != ADMIN_ID and str(user_id) not in user_channels:
         return bot.send_message(message.chat.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً لتتمكن من إرسال الصور.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel")))
@@ -583,7 +663,6 @@ def handle_photo(message):
 
     if settings["status"] == "OFF": return bot.send_message(message.chat.id, "معطل.", reply_markup=get_main_panel(user_id))
 
-    # نظام تجميع الألبوم
     if message.media_group_id:
         if message.media_group_id not in media_groups:
             media_groups[message.media_group_id] = {
@@ -593,7 +672,6 @@ def handle_photo(message):
                 'settings': settings
             }
         media_groups[message.media_group_id]['photos'].append(message.photo[-1].file_id)
-        
         threading.Timer(2.0, process_album, args=[message.media_group_id, message.chat.id]).start()
         return
 
@@ -701,6 +779,7 @@ def process_single_photo(message, settings, target_channel):
             InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
             InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
             InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_image_{post_id}"),
+            InlineKeyboardButton("إضافة ملف صوتي", callback_data=f"add_audio_to_post_{post_id}"),
             InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
         )
         bot.delete_message(message.chat.id, msg_loading.message_id)
@@ -757,7 +836,7 @@ def handle_text(message):
         except Exception as e:
             bot.send_message(message.chat.id, f"خطأ: {e}")
 
-# ================= 10. لوحات مساعدة =================
+# ================= 12. لوحات مساعدة =================
 def get_lang_panel():
     markup = InlineKeyboardMarkup(row_width=3)
     markup.add(InlineKeyboardButton("عربي", callback_data="lang_عربي"), InlineKeyboardButton("إنجليزي", callback_data="lang_إنجليزي"), InlineKeyboardButton("مختلط", callback_data="lang_مختلط"))
