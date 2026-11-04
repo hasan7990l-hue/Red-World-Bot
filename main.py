@@ -7,8 +7,6 @@ import datetime
 import threading
 import json
 import os
-import requests
-import pingrabber
 
 # ================= الإعدادات =================
 TELEGRAM_TOKEN = '8386513995:AAEB3MxUUzZDXuYAoYiKNaLNvPAh80mt6i8'
@@ -48,6 +46,7 @@ def get_default_settings():
 user_settings = {} 
 generated_texts = {}
 pending_posts = {}
+saved_images = {} # لتخزين الصور لاستخدامها في اقتراح الأغنية
 
 # ================= دالة فحص الاشتراك الإجباري =================
 def check_subscription(user_id):
@@ -207,8 +206,7 @@ def get_main_panel(user_id):
         InlineKeyboardButton("عبارات مختصرة", callback_data="generate_short_text")
     )
     markup.add(
-        InlineKeyboardButton("السورس", callback_data="show_source"),
-        InlineKeyboardButton("تحميل صورة من Pinterest", callback_data="fetch_pinterest")
+        InlineKeyboardButton("السورس", callback_data="show_source")
     )
     markup.add(InlineKeyboardButton("مغادرة القناة (إلغاء الارتباط)", callback_data="leave_channel"))
     return markup
@@ -245,40 +243,40 @@ def handle_generate_text(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, f"خطأ: {e}")
 
-# ================= 7. نظام بينتريست =================
-@bot.callback_query_handler(func=lambda call: call.data == "fetch_pinterest")
-def fetch_pinterest(call):
-    user_id = call.from_user.id
-    if user_id != ADMIN_ID and str(user_id) not in user_channels:
-        return bot.answer_callback_query(call.id, "⚠️ يجب التحقق من القناة أولاً.", show_alert=True)
+# ================= 7. اقتراح أغنية للصورة =================
+@bot.callback_query_handler(func=lambda call: call.data.startswith("find_song_"))
+def find_song(call):
+    post_id = call.data.split("_")[2]
+    if post_id not in saved_images: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
     
-    bot.answer_callback_query(call.id, "جاري البحث...")
-    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحميل صورة حمراء من Pinterest...")
-
+    bot.answer_callback_query(call.id, text="جاري البحث عن أغنية تناسب الصورة...", show_alert=False)
+    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحليل الصورة واقتراح أغنية أجنبية...")
+    
     try:
-        query = "dark red aesthetic"
-        links = pingrabber.search(query)
+        file_info = bot.get_file(saved_images[post_id])
+        downloaded_file = bot.download_file(file_info.file_path)
+        base64_image = base64.b64encode(downloaded_file).decode('utf-8')
         
-        if not links:
-            bot.edit_message_text("❌ لم يتم العثور على صور.", chat_id=call.message.chat.id, message_id=msg_loading.message_id)
-            return
-
-        img_url = links[0]
-        img_data = requests.get(img_url).content
-
-        post_id = str(int(time.time()))
-        pending_posts[post_id] = {'type': 'photo', 'file_id': img_data, 'caption': "معاينة صورة من Pinterest", 'channel': user_channels[str(user_id)]}
-
-        markup = InlineKeyboardMarkup(row_width=2).add(
-            InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"),
-            InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
+        prompt = (
+            "Look at this image and suggest ONE song that perfectly matches its mood and atmosphere. "
+            "The song MUST be in English (Foreign song) or an instrumental/cinematic soundtrack. "
+            "Do NOT suggest Arabic songs. "
+            "Write the song name and the artist name only, nothing else."
         )
         
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
+            model="qwen/qwen3.8-27b",
+            max_tokens=100
+        )
+        song_suggestion = chat_completion.choices[0].message.content.strip()
+        
         bot.delete_message(call.message.chat.id, msg_loading.message_id)
-        bot.send_photo(call.message.chat.id, photo=img_data, caption="<b>صورة حمراء من Pinterest:</b>\nهل تريد نشرها في قناتك؟", reply_markup=markup, parse_mode='HTML')
-
+        bot.send_message(call.message.chat.id, f"<b>🎵 الأغنية المقترحة:</b>\n\n{song_suggestion}", parse_mode='HTML')
+        
     except Exception as e:
-        bot.edit_message_text(f"❌ حدث خطأ أثناء التحميل: {e}", chat_id=call.message.chat.id, message_id=msg_loading.message_id)
+        bot.delete_message(call.message.chat.id, msg_loading.message_id)
+        bot.send_message(call.message.chat.id, f"حدث خطأ أثناء البحث: {e}")
 
 # ================= 8. القفل الأمني =================
 @bot.callback_query_handler(func=lambda call: True)
@@ -473,10 +471,12 @@ def handle_photo(message):
 
         post_id = str(int(time.time()))
         pending_posts[post_id] = {'type': 'photo', 'file_id': message.photo[-1].file_id, 'caption': final_caption, 'channel': target_channel}
+        saved_images[post_id] = message.photo[-1].file_id
         
         markup = InlineKeyboardMarkup(row_width=2).add(
             InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
             InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
+            InlineKeyboardButton("البحث عن أغنية", callback_data=f"find_song_{post_id}"),
             InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
         )
         bot.delete_message(message.chat.id, msg_loading.message_id)
