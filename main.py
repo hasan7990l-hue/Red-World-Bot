@@ -26,7 +26,7 @@ settings = {
 
 generated_texts = {}
 pending_posts = {}
-saved_images = {} # لتخزين الصور لاستخدامها في البحث عن أغنية
+saved_images = {} 
 
 # ================= 1. الترحيب الذكي للمستخدمين الجدد =================
 @bot.message_handler(content_types=['new_chat_members'])
@@ -312,25 +312,30 @@ def callback_handler(call):
             bot.edit_message_text(f"معاينة النص:\n\n{new_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
             return bot.answer_callback_query(call.id, text="تم التحديث", show_alert=False)
 
-    # 8. البحث عن أغنية
+    # 8. البحث عن أغنية (أجنبية / موسيقى تصويرية)
     elif call.data.startswith("find_song_"):
         post_id = call.data.split("_")[2]
         if post_id not in saved_images: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
         
-        bot.answer_callback_query(call.id, text="جاري البحث عن أغنية تناسب الصورة...", show_alert=False)
-        msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحليل الصورة واقتراح أغنية...")
+        bot.answer_callback_query(call.id, text="جاري البحث عن أغنية أجنبية تناسب الصورة...", show_alert=False)
+        msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحليل الصورة واقتراح أغنية أجنبية...")
         
         try:
             file_info = bot.get_file(saved_images[post_id])
             downloaded_file = bot.download_file(file_info.file_path)
             base64_image = base64.b64encode(downloaded_file).decode('utf-8')
             
-            prompt = "انظر إلى هذه الصورة واقترح اسم أغنية (عربية أو إنجليزية) تناسب جوها ومزاجها. اكتب اسم الأغنية والفنان فقط، بدون أي كلام إضافي."
+            prompt = (
+                "Look at this image and suggest ONE song that perfectly matches its mood and atmosphere. "
+                "The song MUST be in English (Foreign song) or an instrumental/cinematic soundtrack. "
+                "Do NOT suggest Arabic songs. "
+                "Write the song name and the artist name only, nothing else."
+            )
             
             chat_completion = client.chat.completions.create(
                 messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
                 model="qwen/qwen3.8-27b",
-                max_tokens=200
+                max_tokens=100
             )
             song_suggestion = chat_completion.choices[0].message.content.strip()
             
@@ -406,7 +411,6 @@ def handle_photo(message):
         downloaded_file = bot.download_file(file_info.file_path)
         base64_image = base64.b64encode(downloaded_file).decode('utf-8')
         
-        # الترتيب في حالة اللغة المختلطة
         if settings['language'] == "مختلط":
             lang_prompt = "اكتب التعليق باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمته باللغة الإنجليزية تحت العربية."
         else:
@@ -425,7 +429,7 @@ def handle_photo(message):
 
         post_id = str(int(time.time()))
         pending_posts[post_id] = {'type': 'photo', 'file_id': message.photo[-1].file_id, 'caption': final_caption}
-        saved_images[post_id] = message.photo[-1].file_id # حفظ الصورة للبحث عن الأغنية
+        saved_images[post_id] = message.photo[-1].file_id
         
         markup = InlineKeyboardMarkup(row_width=2).add(
             InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
@@ -446,7 +450,6 @@ def handle_text(message):
         try: bot.delete_message(message.chat.id, message.message_id)
         except: pass
         
-        # الترتيب في حالة اللغة المختلطة للنصوص
         if settings['language'] == "مختلط":
             lang_prompt = "اكتب العبارة باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمتها باللغة الإنجليزية تحت العربية."
         else:
