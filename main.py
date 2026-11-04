@@ -63,49 +63,47 @@ pending_posts = {}
 media_groups = {} 
 saved_images = {} 
 
-# ================= دالة تحويل الصورة إلى JPG =================
+# ================= دالة تحويل وضغط الصورة إلى JPG =================
 def convert_to_jpg(image_bytes):
     try:
         img = Image.open(io.BytesIO(image_bytes))
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-        img.thumbnail((320, 320)) # تصغير الصورة لضمان قبولها كغلاف
+        
+        # تصغير الصورة لضمان أن حجمها صغير جداً (تيليجرام يقبل الغلاف إذا كان < 200KB)
+        img.thumbnail((200, 200)) 
+        
         output = io.BytesIO()
-        img.save(output, format="JPEG", quality=90)
+        img.save(output, format="JPEG", quality=75)
         return output.getvalue()
     except Exception as e:
         print(f"Error converting image: {e}")
         return image_bytes
 
-# ================= دالة إنشاء ملف صوتي جديد مع الغلاف =================
+# ================= دالة بناء الملف الصوتي بالغلاف =================
 def rebuild_audio_with_cover(original_audio_bytes, cover_bytes):
     try:
-        # إنشاء نسخة جديدة من الملف في الذاكرة
         audio_buffer = io.BytesIO(original_audio_bytes)
         audio = MP3(audio_buffer, ID3=ID3)
         
-        # حذف جميع التاجات القديمة لضمان عدم وجود تعارض
         try:
             audio.delete()
         except ID3Error:
             pass
         
-        # إضافة تاجات جديدة
         audio.add_tags()
         audio.tags.add(TIT2(encoding=3, text="Red world | عالم الأحمر"))
         audio.tags.add(TPE1(encoding=3, text="@Eror_7"))
         
-        # تحويل الصورة وإضافتها
         cover_data_jpg = convert_to_jpg(cover_bytes)
         audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=cover_data_jpg))
         
-        # حفظ الملف
         audio.save(audio_buffer)
         audio_buffer.seek(0)
-        return audio_buffer.getvalue() # إرجاع البيانات كـ Bytes
+        return audio_buffer.getvalue(), cover_data_jpg
     except Exception as e:
         print(f"Error rebuilding audio: {e}")
-        return original_audio_bytes
+        return original_audio_bytes, cover_bytes
 
 # ================= دالة فحص الاشتراك الإجباري =================
 def check_subscription(user_id):
@@ -330,9 +328,8 @@ def handle_audio_merge(message):
             audio_data = bot.download_file(file_info.file_path)
             
             cover_data = audio_edit_state[user_id]['cover_data']
-            rebuilt_audio_data = rebuild_audio_with_cover(audio_data, cover_data)
+            rebuilt_audio_data, cover_jpg = rebuild_audio_with_cover(audio_data, cover_data)
             
-            # حفظ البيانات الأصلية لإعادة الاستخدام عند النشر
             audio_edit_state[user_id]['original_audio'] = audio_data
             audio_edit_state[user_id]['cover_data'] = cover_data
             
@@ -344,12 +341,12 @@ def handle_audio_merge(message):
             
             bot.delete_message(message.chat.id, msg_loading.message_id)
             
-            # إرسال المعاينة في الخاص
             bot.send_audio(
                 message.chat.id, 
                 audio_buffer, 
                 title="Red world | عالم الأحمر", 
-                performer="@Eror_7"
+                performer="@Eror_7",
+                thumb=cover_jpg # تمرير الغلاف هنا
             )
             bot.send_message(message.chat.id, f"تم إضافة الحقوق بنجاح.", reply_markup=markup)
         except Exception as e:
@@ -374,7 +371,7 @@ def handle_audio_merge(message):
             photo_file_info = bot.get_file(data['photo_id'])
             photo_data = bot.download_file(photo_file_info.file_path)
             
-            rebuilt_audio_data = rebuild_audio_with_cover(audio_data, photo_data)
+            rebuilt_audio_data, cover_jpg = rebuild_audio_with_cover(audio_data, photo_data)
             
             pending_audio_merge[user_id]['original_audio'] = audio_data
             pending_audio_merge[user_id]['cover_data'] = photo_data
@@ -389,12 +386,12 @@ def handle_audio_merge(message):
             
             bot.delete_message(message.chat.id, msg_loading.message_id)
             
-            # إرسال المعاينة
             bot.send_audio(
                 message.chat.id, 
                 audio_buffer, 
                 title="Red world | عالم الأحمر", 
-                performer="@Eror_7"
+                performer="@Eror_7",
+                thumb=cover_jpg # تمرير الغلاف هنا
             )
             bot.send_message(message.chat.id, "تم دمج الصورة مع الصوت. اختر الإجراء:", reply_markup=markup)
             
@@ -417,8 +414,7 @@ def publish_standalone_audio(call):
         return bot.answer_callback_query(call.id, "⚠️ القناة غير مرتبطة. يرجى التحقق من الرفع.", show_alert=True)
     
     try:
-        # إعادة بناء الملف من جديد لضمان قبول الغلاف في القناة
-        rebuilt_audio_data = rebuild_audio_with_cover(data['original_audio'], data['cover_data'])
+        rebuilt_audio_data, cover_jpg = rebuild_audio_with_cover(data['original_audio'], data['cover_data'])
         audio_buffer = io.BytesIO(rebuilt_audio_data)
         
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
@@ -428,6 +424,7 @@ def publish_standalone_audio(call):
             audio_buffer, 
             title="Red world | عالم الأحمر", 
             performer="@Eror_7",
+            thumb=cover_jpg, # <--- هذا هو المفتاح لظهور الغلاف في القناة
             reply_markup=markup
         )
         
@@ -451,8 +448,7 @@ def publish_audio(call):
     data = pending_audio_merge[user_id]
     
     try:
-        # إعادة بناء الملف من جديد لضمان قبول الغلاف في القناة
-        rebuilt_audio_data = rebuild_audio_with_cover(data['original_audio'], data['cover_data'])
+        rebuilt_audio_data, cover_jpg = rebuild_audio_with_cover(data['original_audio'], data['cover_data'])
         audio_buffer = io.BytesIO(rebuilt_audio_data)
         
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
@@ -464,6 +460,7 @@ def publish_audio(call):
             performer="@Eror_7",
             caption=data['caption'],
             parse_mode='HTML',
+            thumb=cover_jpg, # <--- هذا هو المفتاح لظهور الغلاف في القناة
             reply_markup=markup
         )
         
