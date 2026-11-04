@@ -11,7 +11,7 @@ import requests
 import pingrabber
 
 # ================= الإعدادات =================
-TELEGRAM_TOKEN = '8217717390:AAH5z6C5DRzT_qA_KNqDFFTkTV0hoVy2EGE'
+TELEGRAM_TOKEN = '8386513995:AAEB3MxUUzZDXuYAoYiKNaLNvPAh80mt6i8'
 GROQ_API_KEY = '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'
 ADMIN_ID = 8456056018 
 
