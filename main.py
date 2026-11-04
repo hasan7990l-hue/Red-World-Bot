@@ -24,6 +24,7 @@ client = Groq(api_key=GROQ_API_KEY)
 
 DB_FILE = "user_channels.json"
 AUDIO_DIR = "downloaded_audio"
+COOKIES_FILE = "cookies.txt" # اسم ملف الكوكيز الذي رفعته
 
 if not os.path.exists(AUDIO_DIR):
     os.makedirs(AUDIO_DIR)
@@ -260,8 +261,7 @@ def find_song(call):
     msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري البحث عن أغنية روسية حقيقية (حزينة/ريمكس)...")
     
     try:
-        # البحث في يوتيوب باستخدام كلمات مفتاحية روسية
-        search_query = "грустная песня ремикс 2024 2025" # أغنية حزينة ريمكس 2024-2025
+        search_query = "грустная песня ремикс 2024 2025" 
         
         url = "https://www.googleapis.com/youtube/v3/search"
         params = {
@@ -318,6 +318,12 @@ def download_audio(call):
             }],
             'quiet': True,
             'no_warnings': True,
+            'cookiefile': COOKIES_FILE,  # استخدام ملف الكوكيز
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['mweb', 'tv', 'web_safari'] 
+                }
+            }
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
