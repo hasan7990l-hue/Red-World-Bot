@@ -55,24 +55,31 @@ def check_subscription(user_id):
         try:
             member = bot.get_chat_member(channel, user_id)
             if member.status not in ['member', 'administrator', 'creator']:
-                return False, channel
+                return False
         except Exception:
-            # إذا فشل الفحص (البوت ليس مشرفاً أو القناة خاطئة)، نعتبره غير مشترك لتجنب الأخطاء
-            return False, channel
-    return True, None
+            # إذا فشل الفحص (البوت ليس مشرفاً أو القناة خاطئة)، نعتبره غير مشترك
+            return False
+    return True
 
 def send_force_sub_message(chat_id):
+    # كليشة عربية فخمة
+    text = (
+        "<b>⟨ بوابة عالم الأحمر ⟩</b>\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+        "<blockquote>"
+        "أهلاً بك. للوصول إلى نظام إدارة القناة، يجب عليك الانضمام إلى قنواتنا أولاً.\n\n"
+        "🔴 <b>القناة الأولى:</b> @Eror_7\n"
+        "🔴 <b>القناة الثانية:</b> @lb2_c"
+        "</blockquote>\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+        "<i>بعد الاشتراك في القناتين، اضغط على زر (تحقق من الاشتراك).</i>"
+    )
+    
     markup = InlineKeyboardMarkup(row_width=1)
     markup.add(InlineKeyboardButton("اشترك في القناة الأولى (@Eror_7)", url="https://t.me/Eror_7"))
     markup.add(InlineKeyboardButton("اشترك في القناة الثانية (@lb2_c)", url="https://t.me/lb2_c"))
     markup.add(InlineKeyboardButton("تحقق من الاشتراك ✅", callback_data="check_sub"))
     
-    text = (
-        "<b>⛔ عذراً، يجب عليك الاشتراك في القنوات التالية أولاً لاستخدام البوت:</b>\n\n"
-        "1. @Eror_7\n"
-        "2. @lb2_c\n\n"
-        "بعد الاشتراك، اضغط على زر (تحقق من الاشتراك)."
-    )
     bot.send_message(chat_id, text, reply_markup=markup, parse_mode='HTML')
 
 # ================= 1. الترحيب (مع الفحص) =================
@@ -80,9 +87,8 @@ def send_force_sub_message(chat_id):
 def send_welcome(message):
     user_id = message.from_user.id
     
-    # فحص الاشتراك الإجباري
-    is_subscribed, _ = check_subscription(user_id)
-    if not is_subscribed and user_id != ADMIN_ID:
+    # فحص الاشتراك الإجباري (تجاوز الفحص للمالك فقط)
+    if user_id != ADMIN_ID and not check_subscription(user_id):
         return send_force_sub_message(message.chat.id)
 
     if user_id not in user_settings:
@@ -112,9 +118,8 @@ def send_welcome(message):
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def check_sub(call):
     user_id = call.from_user.id
-    is_subscribed, _ = check_subscription(user_id)
     
-    if is_subscribed:
+    if check_subscription(user_id):
         bot.answer_callback_query(call.id, "✅ تم التحقق بنجاح! أهلاً بك.", show_alert=True)
         bot.delete_message(call.message.chat.id, call.message.message_id)
         send_welcome(call.message)
@@ -124,11 +129,6 @@ def check_sub(call):
 # ================= 3. التحقق المزدوج =================
 @bot.callback_query_handler(func=lambda call: call.data == "verify_channel")
 def verify_channel(call):
-    # فحص الاشتراك أولاً
-    is_subscribed, _ = check_subscription(call.from_user.id)
-    if not is_subscribed and call.from_user.id != ADMIN_ID:
-        return bot.answer_callback_query(call.id, "⛔ يجب الاشتراك في القنوات أولاً.", show_alert=True)
-
     bot.answer_callback_query(call.id, "جاري الفحص...")
     user_id = call.from_user.id
     channel_id = user_channels.get(str(user_id))
@@ -216,14 +216,9 @@ def get_main_panel(user_id):
     markup.add(InlineKeyboardButton("مغادرة القناة (إلغاء الارتباط)", callback_data="leave_channel"))
     return markup
 
-# ================= 6. توليد العبارات (طويلة / مختصرة) =================
+# ================= 6. توليد العبارات =================
 @bot.callback_query_handler(func=lambda call: call.data in ["generate_long_text", "generate_short_text"])
 def handle_generate_text(call):
-    # فحص الاشتراك
-    is_subscribed, _ = check_subscription(call.from_user.id)
-    if not is_subscribed and call.from_user.id != ADMIN_ID:
-        return bot.answer_callback_query(call.id, "⛔ يجب الاشتراك في القنوات أولاً.", show_alert=True)
-
     user_id = call.from_user.id
     settings = user_settings.get(user_id, get_default_settings())
     
@@ -257,10 +252,6 @@ def handle_generate_text(call):
 @bot.callback_query_handler(func=lambda call: call.data == "fetch_pinterest")
 def fetch_pinterest(call):
     user_id = call.from_user.id
-    is_subscribed, _ = check_subscription(user_id)
-    if not is_subscribed and user_id != ADMIN_ID:
-        return bot.answer_callback_query(call.id, "⛔ يجب الاشتراك في القنوات أولاً.", show_alert=True)
-    
     if user_id != ADMIN_ID and str(user_id) not in user_channels:
         return bot.answer_callback_query(call.id, "⚠️ يجب التحقق من القناة أولاً.", show_alert=True)
     
@@ -292,20 +283,14 @@ def fetch_pinterest(call):
     except Exception as e:
         bot.edit_message_text(f"❌ حدث خطأ أثناء التحميل: {e}", chat_id=call.message.chat.id, message_id=msg_loading.message_id)
 
-# ================= 8. القفل الأمني ومعالجة الأزرار =================
+# ================= 8. القفل الأمني =================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.from_user.id
     
-    # 1. فحص الاشتراك الإجباري (لكل الأزرار ما عدا التحقق)
-    if call.data not in ["check_sub", "verify_channel"]:
-        is_subscribed, _ = check_subscription(user_id)
-        if not is_subscribed and user_id != ADMIN_ID:
-            return bot.answer_callback_query(call.id, "⛔ يجب الاشتراك في القنوات أولاً.", show_alert=True)
-
-    # 2. القفل الأمني (التحقق من رفع البوت)
+    # القفل الأمني (التحقق من رفع البوت)
     if user_id != ADMIN_ID and str(user_id) not in user_channels:
-        if call.data not in ["verify_channel", "main_menu"]:
+        if call.data not in ["verify_channel", "main_menu", "check_sub"]:
             return bot.answer_callback_query(call.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً لتتمكن من استخدام الأزرار.", show_alert=True)
 
     settings = user_settings.get(user_id, get_default_settings())
@@ -460,11 +445,6 @@ def callback_handler(call):
 def handle_photo(message):
     user_id = message.from_user.id
     
-    # فحص الاشتراك
-    is_subscribed, _ = check_subscription(user_id)
-    if not is_subscribed and user_id != ADMIN_ID:
-        return send_force_sub_message(message.chat.id)
-    
     if user_id != ADMIN_ID and str(user_id) not in user_channels:
         return bot.send_message(message.chat.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً لتتمكن من إرسال الصور.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel")))
 
@@ -515,11 +495,6 @@ def handle_text(message):
     settings = user_settings.get(user_id, get_default_settings())
     
     if message.text.startswith('/'): return
-    
-    # فحص الاشتراك
-    is_subscribed, _ = check_subscription(user_id)
-    if not is_subscribed and user_id != ADMIN_ID:
-        return send_force_sub_message(message.chat.id)
     
     if user_id != ADMIN_ID and str(user_id) not in user_channels:
         return bot.send_message(message.chat.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel")))
