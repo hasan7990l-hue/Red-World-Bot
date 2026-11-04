@@ -188,6 +188,7 @@ def callback_handler(call):
                               parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
+    # التفعيل والتعطيل (تحديث الأزرار فقط لإبقاء النص ثابتاً)
     elif call.data == "toggle_status":
         settings["status"] = "OFF" if settings["status"] == "ON" else "ON"
         bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
@@ -198,38 +199,27 @@ def callback_handler(call):
         bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"النشر النصي: {'مفعل' if settings['text_only_mode'] else 'معطل'}", show_alert=False)
 
+    # اللغة والفئات (تحديث الأزرار فقط، والإشعار المنسدل)
     elif call.data == "menu_lang":
-        text = "<b>إعدادات اللغة:</b>\n\nاختر اللغة التي تريدها:"
-        bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_lang_panel(), parse_mode='HTML')
+        bot.edit_message_text("<b>إعدادات اللغة:</b>\n\nاختر اللغة التي تريدها:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_lang_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
     elif call.data.startswith("lang_"):
         settings["language"] = call.data.replace("lang_", "")
-        # إرجاع القائمة الرئيسية (عبر تعديل الرسالة الحالية)
-        bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", 
-                              chat_id=call.message.chat.id, 
-                              message_id=call.message.message_id, 
-                              reply_markup=get_main_panel(), 
-                              parse_mode='HTML')
-        # إشعار منسدل (Toast)
+        # إرجاع الأزرار الرئيسية دون تغيير النص الأساسي
+        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"تم اختيار اللغة: {settings['language']}", show_alert=False)
 
     elif call.data == "menu_categories":
-        text = "<b>فئات العبارات:</b>\n\nاختر الفئة التي تناسب جو القناة:"
-        bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_categories_panel(), parse_mode='HTML')
+        bot.edit_message_text("<b>فئات العبارات:</b>\n\nاختر الفئة التي تناسب جو القناة:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_categories_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
     elif call.data.startswith("cat_"):
         settings["category"] = call.data.replace("cat_", "")
-        # إرجاع القائمة الرئيسية (عبر تعديل الرسالة الحالية)
-        bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", 
-                              chat_id=call.message.chat.id, 
-                              message_id=call.message.message_id, 
-                              reply_markup=get_main_panel(), 
-                              parse_mode='HTML')
-        # إشعار منسدل (Toast)
+        bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"تم اختيار الفئة: {settings['category']}", show_alert=False)
 
+    # السورس (كليشة نصية فخمة ونظيفة)
     elif call.data == "show_source":
         try:
             dev_info = bot.get_chat(ADMIN_ID)
@@ -252,6 +242,7 @@ def callback_handler(call):
         bot.edit_message_text(source_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
+    # توليد العبارة
     elif call.data == "generate_text":
         bot.answer_callback_query(call.id, text="جاري التوليد...", show_alert=False)
         lang_prompt = f"باللغة {settings['language']}" if settings['language'] != "مختلط" else "مزيج بين العربية والإنجليزية"
@@ -270,6 +261,7 @@ def callback_handler(call):
         except Exception as e:
             bot.send_message(call.message.chat.id, f"خطأ: {e}")
 
+    # أزرار التنسيق
     elif call.data.startswith('fmt_'):
         parts = call.data.split('_')
         action, msg_id = parts[1], parts[2]
@@ -309,6 +301,7 @@ def callback_handler(call):
             bot.edit_message_text(f"معاينة النص:\n\n{new_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
             return bot.answer_callback_query(call.id, text="تم التحديث", show_alert=False)
 
+    # تأكيد النشر
     elif call.data.startswith("confirm_"):
         post_id = call.data.split("_")[1]
         if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
