@@ -26,6 +26,7 @@ settings = {
 
 generated_texts = {}
 pending_posts = {}
+saved_images = {} # لتخزين الصور لاستخدامها في البحث عن أغنية
 
 # ================= 1. الترحيب الذكي للمستخدمين الجدد =================
 @bot.message_handler(content_types=['new_chat_members'])
@@ -54,9 +55,7 @@ def welcome_new_members(message):
             InlineKeyboardButton("إضافة البوت لقناتك", url=f"https://t.me/{bot.get_me().username}?startchannel=true"),
             InlineKeyboardButton("المبرمج", url=f"tg://user?id={ADMIN_ID}")
         )
-        markup.add(
-            InlineKeyboardButton("تم رفع البوت (فحص)", callback_data="check_bot_status")
-        )
+        markup.add(InlineKeyboardButton("تم رفع البوت (فحص)", callback_data="check_bot_status"))
         
         try:
             bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='HTML')
@@ -68,39 +67,28 @@ def welcome_new_members(message):
 def check_bot_status(call):
     msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري فحص الاتصال بالقناة والصلاحيات...")
     time.sleep(1.5)
-
     try:
         test_msg = bot.send_message(CHANNEL_ID, "System Check...")
         bot.delete_message(CHANNEL_ID, test_msg.message_id)
-        
         success_text = (
             f"<b>⟨ نتيجة الفحص ⟩</b>\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-            f"<blockquote>"
-            f"<b>الحالة:</b> ✅ ناجح\n"
-            f"<b>الاتصال:</b> البوت مرفوع ومشرف في القناة.\n"
-            f"<b>الصلاحيات:</b> يمتلك صلاحية النشر.\n"
-            f"</blockquote>\n"
+            f"<blockquote><b>الحالة:</b> ✅ ناجح\n<b>الاتصال:</b> البوت مرفوع ومشرف في القناة.\n<b>الصلاحيات:</b> يمتلك صلاحية النشر.</blockquote>\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
             f"<i>يمكنك الآن استخدام لوحة التحكم لإدارة القناة.</i>"
         )
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton("فتح القائمة الرئيسية", callback_data="main_menu"))
         bot.edit_message_text(success_text, chat_id=call.message.chat.id, message_id=msg_loading.message_id, reply_markup=markup, parse_mode='HTML')
         bot.answer_callback_query(call.id, "✅ البوت يعمل بنجاح!")
-
     except Exception as e:
         error_text = (
             f"<b>⟨ نتيجة الفحص ⟩</b>\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-            f"<blockquote>"
-            f"<b>الحالة:</b> ❌ فشل\n"
-            f"<b>السبب:</b> البوت ليس مشرفاً في القناة أو تم طرده.\n"
-            f"</blockquote>\n"
+            f"<blockquote><b>الحالة:</b> ❌ فشل\n<b>السبب:</b> البوت ليس مشرفاً في القناة أو تم طرده.</blockquote>\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
             f"<i>يرجى رفع البوت كمشرف وإعطائه صلاحية 'نشر الرسائل' ثم إعادة الفحص.</i>"
         )
-        markup = InlineKeyboardMarkup(row_width=1)
-        markup.add(
+        markup = InlineKeyboardMarkup(row_width=1).add(
             InlineKeyboardButton("إعادة الفحص", callback_data="check_bot_status"),
             InlineKeyboardButton("إضافة البوت للقناة", url=f"https://t.me/{bot.get_me().username}?startchannel=true"),
             InlineKeyboardButton("رجوع للقائمة", callback_data="main_menu")
@@ -172,7 +160,7 @@ def apply_formatting(data):
 @bot.message_handler(commands=['start', 'panel'])
 def send_welcome(message):
     if message.from_user.id != ADMIN_ID: return
-    welcome_text = "<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nهذه هي لوحة التحكم الرئيسية. اختر الإجراء الذي تريده من الأزرار أدناه."
+    welcome_text = "<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nهذه هي لوحة التحكم الرئيسية. اختر الإجراء الذي تريده:"
     bot.send_message(message.chat.id, welcome_text, reply_markup=get_main_panel(), parse_mode='HTML')
 
 # ================= 5. معالجة الأزرار =================
@@ -180,21 +168,18 @@ def send_welcome(message):
 def callback_handler(call):
     if call.from_user.id != ADMIN_ID: return
 
-    # 1. زر الرجوع للقائمة (يعيد نفس الرسالة لتصبح القائمة الرئيسية بدون حذف أو إرسال جديد)
+    # 1. زر الرجوع
     if call.data == "main_menu":
         main_text = "<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nاختر الإجراء الذي تريده:"
-        
-        # إذا كانت الرسالة الحالية تحتوي على صورة (السورس)، لا يمكن تعديلها لنص، لذا نحذفها ونرسل القائمة
         if call.message.content_type == 'photo':
             try: bot.delete_message(call.message.chat.id, call.message.message_id)
             except: pass
             bot.send_message(call.message.chat.id, main_text, reply_markup=get_main_panel(), parse_mode='HTML')
         else:
-            # إذا كانت نصية، نعدلها في مكانها
             bot.edit_message_text(main_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
-    # 2. التفعيل والتعطيل (تحديث الأزرار فقط مع مسافة خفية)
+    # 2. التفعيل والتعطيل
     elif call.data == "toggle_status":
         settings["status"] = "OFF" if settings["status"] == "ON" else "ON"
         bot.edit_message_text("‎", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel())
@@ -205,7 +190,7 @@ def callback_handler(call):
         bot.edit_message_text("‎", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"النشر النصي: {'مفعل' if settings['text_only_mode'] else 'معطل'}", show_alert=False)
 
-    # 3. اللغة (تعديل النص والأزرار في نفس الرسالة)
+    # 3. اللغة
     elif call.data == "menu_lang":
         bot.edit_message_text("<b>إعدادات اللغة:</b>\n\nاختر اللغة التي تريدها:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_lang_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
@@ -215,7 +200,7 @@ def callback_handler(call):
         bot.edit_message_text("<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nاختر الإجراء الذي تريده:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id, text=f"تم اختيار اللغة: {settings['language']}", show_alert=False)
 
-    # 4. الفئات (تعديل النص والأزرار في نفس الرسالة)
+    # 4. الفئات
     elif call.data == "menu_categories":
         bot.edit_message_text("<b>فئات العبارات:</b>\n\nاختر الفئة التي تناسب جو القناة:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_categories_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
@@ -225,7 +210,7 @@ def callback_handler(call):
         bot.edit_message_text("<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nاختر الإجراء الذي تريده:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(), parse_mode='HTML')
         return bot.answer_callback_query(call.id, text=f"تم اختيار الفئة: {settings['category']}", show_alert=False)
 
-    # 5. السورس (صورة + كليشة)
+    # 5. السورس
     elif call.data == "show_source":
         try:
             dev_info = bot.get_chat(ADMIN_ID)
@@ -265,8 +250,14 @@ def callback_handler(call):
     # 6. توليد العبارة
     elif call.data == "generate_text":
         bot.answer_callback_query(call.id, text="جاري التوليد...", show_alert=False)
-        lang_prompt = f"باللغة {settings['language']}" if settings['language'] != "مختلط" else "مزيج بين العربية والإنجليزية"
+        
+        if settings['language'] == "مختلط":
+            lang_prompt = "اكتب العبارة باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمتها باللغة الإنجليزية تحت العربية."
+        else:
+            lang_prompt = f"باللغة {settings['language']}"
+
         prompt = f"اكتب عبارة قصيرة جداً بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها عالم الأحمر. بدون إيموجي."
+        
         try:
             chat_completion = client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}], 
@@ -321,7 +312,36 @@ def callback_handler(call):
             bot.edit_message_text(f"معاينة النص:\n\n{new_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
             return bot.answer_callback_query(call.id, text="تم التحديث", show_alert=False)
 
-    # 8. تأكيد النشر
+    # 8. البحث عن أغنية
+    elif call.data.startswith("find_song_"):
+        post_id = call.data.split("_")[2]
+        if post_id not in saved_images: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
+        
+        bot.answer_callback_query(call.id, text="جاري البحث عن أغنية تناسب الصورة...", show_alert=False)
+        msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحليل الصورة واقتراح أغنية...")
+        
+        try:
+            file_info = bot.get_file(saved_images[post_id])
+            downloaded_file = bot.download_file(file_info.file_path)
+            base64_image = base64.b64encode(downloaded_file).decode('utf-8')
+            
+            prompt = "انظر إلى هذه الصورة واقترح اسم أغنية (عربية أو إنجليزية) تناسب جوها ومزاجها. اكتب اسم الأغنية والفنان فقط، بدون أي كلام إضافي."
+            
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
+                model="qwen/qwen3.8-27b",
+                max_tokens=200
+            )
+            song_suggestion = chat_completion.choices[0].message.content.strip()
+            
+            bot.delete_message(call.message.chat.id, msg_loading.message_id)
+            bot.send_message(call.message.chat.id, f"<b>🎵 الأغنية المقترحة:</b>\n\n{song_suggestion}", parse_mode='HTML')
+            
+        except Exception as e:
+            bot.delete_message(call.message.chat.id, msg_loading.message_id)
+            bot.send_message(call.message.chat.id, f"حدث خطأ أثناء البحث: {e}")
+
+    # 9. تأكيد النشر
     elif call.data.startswith("confirm_"):
         post_id = call.data.split("_")[1]
         if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
@@ -385,7 +405,13 @@ def handle_photo(message):
         file_info = bot.get_file(message.photo[-1].file_id)
         downloaded_file = bot.download_file(file_info.file_path)
         base64_image = base64.b64encode(downloaded_file).decode('utf-8')
-        lang_prompt = f"باللغة {settings['language']}" if settings['language'] != "مختلط" else "مزيج بين العربية والإنجليزية"
+        
+        # الترتيب في حالة اللغة المختلطة
+        if settings['language'] == "مختلط":
+            lang_prompt = "اكتب التعليق باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمته باللغة الإنجليزية تحت العربية."
+        else:
+            lang_prompt = f"باللغة {settings['language']}"
+            
         prompt = f"اكتب تعليقاً قصيراً بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
         
         chat_completion = client.chat.completions.create(
@@ -399,9 +425,12 @@ def handle_photo(message):
 
         post_id = str(int(time.time()))
         pending_posts[post_id] = {'type': 'photo', 'file_id': message.photo[-1].file_id, 'caption': final_caption}
-        markup = InlineKeyboardMarkup(row_width=3).add(
+        saved_images[post_id] = message.photo[-1].file_id # حفظ الصورة للبحث عن الأغنية
+        
+        markup = InlineKeyboardMarkup(row_width=2).add(
             InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
             InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
+            InlineKeyboardButton("البحث عن أغنية", callback_data=f"find_song_{post_id}"),
             InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
         )
         bot.delete_message(message.chat.id, msg_loading.message_id)
@@ -416,16 +445,35 @@ def handle_text(message):
     if settings["text_only_mode"] and settings["status"] == "ON":
         try: bot.delete_message(message.chat.id, message.message_id)
         except: pass
-        text_to_publish = f"<b>{message.text}</b>"
-        if settings["add_hashtags"]: text_to_publish += f"\n\n{settings['hashtags']}"
-        post_id = str(int(time.time()))
-        pending_posts[post_id] = {'type': 'text', 'caption': text_to_publish}
-        markup = InlineKeyboardMarkup(row_width=3).add(
-            InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
-            InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
-            InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
-        )
-        bot.send_message(message.chat.id, f"<b>معاينة:</b>\n\n{text_to_publish}", reply_markup=markup, parse_mode='HTML')
+        
+        # الترتيب في حالة اللغة المختلطة للنصوص
+        if settings['language'] == "مختلط":
+            lang_prompt = "اكتب العبارة باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمتها باللغة الإنجليزية تحت العربية."
+        else:
+            lang_prompt = f"باللغة {settings['language']}"
+            
+        prompt = f"اكتب عبارة قصيرة بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
+        
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}], 
+                model="qwen/qwen3.8-27b",
+                max_tokens=500
+            )
+            ai_text = chat_completion.choices[0].message.content.strip()
+            final_caption = f"<b>{ai_text}</b>"
+            if settings["add_hashtags"]: final_caption += f"\n\n{settings['hashtags']}"
+            
+            post_id = str(int(time.time()))
+            pending_posts[post_id] = {'type': 'text', 'caption': final_caption}
+            markup = InlineKeyboardMarkup(row_width=3).add(
+                InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
+                InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
+                InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
+            )
+            bot.send_message(message.chat.id, f"<b>معاينة:</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+        except Exception as e:
+            bot.send_message(message.chat.id, f"خطأ: {e}")
 
 print("البوت يعمل...")
 bot.infinity_polling()
