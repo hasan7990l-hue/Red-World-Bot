@@ -1,3 +1,4 @@
 pyTelegramBotAPI
 groq
 yt-dlp
+requests
