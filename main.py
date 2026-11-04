@@ -10,6 +10,7 @@ import os
 import io
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, TIT2, TPE1, error as ID3Error
+from PIL import Image
 
 # ================= الإعدادات =================
 TELEGRAM_TOKEN = '8386513995:AAEB3MxUUzZDXuYAoYiKNaLNvPAh80mt6i8'
@@ -19,13 +20,15 @@ ADMIN_ID = 8456056018
 # قنوات الاشتراك الإجباري
 FORCE_CHANNELS = ["@Eror_7", "@lb2_c"]
 
+CHANNEL_NAME = "عالم الأحمر | Red world"
+CHANNEL_LINK = "https://t.me/Eror_7"
+
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
 
 DB_FILE = "user_channels.json"
 STATS_FILE = "stats.json"
 
-# متغيرات لحفظ الحالة مؤقتاً
 audio_edit_state = {} 
 pending_audio_merge = {} 
 
@@ -59,6 +62,21 @@ generated_texts = {}
 pending_posts = {}
 media_groups = {} 
 saved_images = {} 
+
+# ================= دالة تحويل الصورة إلى JPG =================
+def convert_to_jpg(image_bytes):
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        # تصغير الصورة إذا كانت كبيرة جداً (تيليجرام يفضل صور صغيرة للغلاف)
+        img.thumbnail((500, 500))
+        output = io.BytesIO()
+        img.save(output, format="JPEG", quality=85)
+        return output.getvalue()
+    except Exception as e:
+        print(f"Error converting image: {e}")
+        return image_bytes
 
 # ================= دالة فحص الاشتراك الإجباري =================
 def check_subscription(user_id):
@@ -242,7 +260,7 @@ def start_audio_edit(call):
         parse_mode='HTML'
     )
 
-# ================= 7. دمج الصورة مع الصوت (النظام الجديد) =================
+# ================= 7. دمج الصورة مع الصوت =================
 @bot.callback_query_handler(func=lambda call: call.data.startswith("add_audio_to_post_"))
 def add_audio_to_post(call):
     post_id = call.data.split("_")[4]
@@ -289,31 +307,37 @@ def handle_audio_merge(message):
             audio.tags.add(TIT2(encoding=3, text="Red world | عالم الأحمر"))
             audio.tags.add(TPE1(encoding=3, text="@Eror_7"))
             
+            # تحويل الصورة إلى JPG
             cover_data = audio_edit_state[user_id]['cover_data']
-            audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=cover_data))
+            cover_data_jpg = convert_to_jpg(cover_data)
+            
+            # إضافة الغلاف
+            audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=cover_data_jpg))
             
             audio.save(audio_buffer)
             audio_buffer.seek(0)
             
             markup = InlineKeyboardMarkup()
+            markup.add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
             markup.add(InlineKeyboardButton("نشر في القناة", callback_data=f"publish_standalone_audio_{user_id}"))
             
             audio_edit_state[user_id]['audio_buffer'] = audio_buffer
             
             bot.delete_message(message.chat.id, msg_loading.message_id)
+            # إرسال الملف الصوتي
             bot.send_audio(
                 message.chat.id, 
                 audio_buffer, 
                 title="Red world | عالم الأحمر", 
-                performer="@Eror_7", 
-                reply_markup=markup
+                performer="@Eror_7"
             )
+            bot.send_message(message.chat.id, f"تم إضافة الحقوق بنجاح.", reply_markup=markup)
         except Exception as e:
             bot.delete_message(message.chat.id, msg_loading.message_id)
             bot.send_message(message.chat.id, f"❌ حدث خطأ: {e}")
         return
 
-    # حالة 2: دمج الصورة مع الصوت في منشور واحد
+    # حالة 2: دمج الصورة مع الصوت
     if user_id in pending_audio_merge:
         data = pending_audio_merge[user_id]
         file_id = None
@@ -337,12 +361,18 @@ def handle_audio_merge(message):
 
             audio.tags.add(TIT2(encoding=3, text="Red world | عالم الأحمر"))
             audio.tags.add(TPE1(encoding=3, text="@Eror_7"))
-            audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=photo_data))
+            
+            # تحويل الصورة إلى JPG
+            photo_data_jpg = convert_to_jpg(photo_data)
+            
+            # إضافة الغلاف
+            audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=photo_data_jpg))
             
             audio.save(audio_buffer)
             audio_buffer.seek(0)
 
             markup = InlineKeyboardMarkup(row_width=2).add(
+                InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK),
                 InlineKeyboardButton("نشر في القناة", callback_data=f"publish_audio_{user_id}"),
                 InlineKeyboardButton("إلغاء", callback_data=f"cancel_audio_{user_id}")
             )
@@ -354,11 +384,9 @@ def handle_audio_merge(message):
                 message.chat.id, 
                 audio_buffer, 
                 title="Red world | عالم الأحمر", 
-                performer="@Eror_7",
-                caption=data['caption'],
-                parse_mode='HTML',
-                reply_markup=markup
+                performer="@Eror_7"
             )
+            bot.send_message(message.chat.id, "تم دمج الصورة مع الصوت. اختر الإجراء:", reply_markup=markup)
             
         except Exception as e:
             bot.delete_message(message.chat.id, msg_loading.message_id)
@@ -382,12 +410,16 @@ def publish_standalone_audio(call):
     audio_buffer.seek(0)
     
     try:
+        markup = InlineKeyboardMarkup().add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
+        
         bot.send_audio(
             target_channel, 
             audio_buffer, 
             title="Red world | عالم الأحمر", 
-            performer="@Eror_7"
+            performer="@Eror_7",
+            reply_markup=markup
         )
+        
         stats["published_count"] += 1
         save_json(STATS_FILE, stats)
         
@@ -409,14 +441,18 @@ def publish_audio(call):
     audio_buffer.seek(0)
     
     try:
+        markup = InlineKeyboardMarkup().add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
+        
         bot.send_audio(
             data['channel'], 
             audio_buffer, 
             title="Red world | عالم الأحمر", 
             performer="@Eror_7",
             caption=data['caption'],
-            parse_mode='HTML'
+            parse_mode='HTML',
+            reply_markup=markup
         )
+        
         stats["published_count"] += 1
         save_json(STATS_FILE, stats)
         
@@ -680,7 +716,7 @@ def callback_handler(call):
         bot.answer_callback_query(call.id, text="تم إلغاء المنشور", show_alert=False)
         bot.send_message(call.message.chat.id, "<b>مرحباً بك في لوحة التحكم</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(user_id), parse_mode='HTML')
 
-# ================= 11. استقبال الصور (مع نظام الألبوم) =================
+# ================= 11. استقبال الصور =================
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
