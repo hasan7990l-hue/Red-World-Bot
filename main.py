@@ -5,6 +5,8 @@ import time
 import base64
 import datetime
 import threading
+import json
+import os
 
 # ================= الإعدادات =================
 TELEGRAM_TOKEN = '8386513995:AAH6GWopP1_8jWCVZvUj_Yix1pjYNt_zGts'
@@ -13,6 +15,21 @@ ADMIN_ID = 8456056018
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
+
+# ملف لحفظ قنوات المستخدمين (لكي لا تضيع عند إعادة التشغيل)
+DB_FILE = "user_channels.json"
+
+def load_db():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def save_db(data):
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+user_channels = load_db()
 
 def get_default_settings():
     return {
@@ -38,13 +55,16 @@ def send_welcome(message):
     welcome_text = (
         f"<b>⟨ مرحباً بك في R W | Bot ⟩</b>\n"
         f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-        f"هذا البوت مخصص لإدارة قنوات تيليجرام باحترافية.\n"
-        f"لإضافة البوت لقناتك، اضغط على الزر أدناه واختر قناتك.\n\n"
-        f"<i>ملاحظة: تأكد من إعطاء البوت صلاحية 'نشر الرسائل' كـ مشرف.</i>"
+        f"هذا البوت مخصص لإدارة قنوات تيليجرام باحترافية.\n\n"
+        f"<b>الخطوات:</b>\n"
+        f"1. أضف البوت إلى قناتك (كـ مشرف).\n"
+        f"2. ارجع هنا واضغط على زر (التحقق من الرفع).\n"
+        f"3. ابدأ بإرسال الصور أو النصوص."
     )
     
     markup = InlineKeyboardMarkup(row_width=1)
-    markup.add(InlineKeyboardButton("إضافة البوت لقناتك", url=f"https://t.me/{bot.get_me().username}?startchannel=true"))
+    markup.add(InlineKeyboardButton("1. إضافة البوت لقناتك", url=f"https://t.me/{bot.get_me().username}?startchannel=true"))
+    markup.add(InlineKeyboardButton("2. التحقق من الرفع (فحص تلقائي)", callback_data="verify_channel"))
     markup.add(InlineKeyboardButton("المبرمج", url=f"tg://user?id={ADMIN_ID}"))
     
     if user_id == ADMIN_ID:
@@ -52,7 +72,63 @@ def send_welcome(message):
 
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='HTML')
 
-# ================= 2. لوحة التحكم =================
+# ================= 2. التحقق التلقائي من الرفع =================
+@bot.callback_query_handler(func=lambda call: call.data == "verify_channel")
+def verify_channel(call):
+    user_id = call.from_user.id
+    channel_id = user_channels.get(str(user_id))
+    
+    if not channel_id:
+        return bot.answer_callback_query(call.id, "⚠️ لم يتم العثور على قناة. يرجى إضافة البوت للقناة أولاً كـ مشرف، ثم المحاولة.", show_alert=True)
+
+    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري فحص القناة والصلاحيات...")
+
+    try:
+        # جلب معلومات القناة من الذاكرة
+        chat_info = bot.get_chat(channel_id)
+        
+        # فحص صلاحيات البوت في القناة
+        bot_member = bot.get_chat_member(channel_id, bot.get_me().id)
+        
+        if bot_member.status in ['administrator', 'creator'] and bot_member.can_post_messages:
+            success_text = (
+                f"<b>⟨ نتيجة الفحص ⟩</b>\n"
+                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+                f"<blockquote><b>الحالة:</b> ✅ ناجح\n"
+                f"<b>القناة:</b> {chat_info.title}\n"
+                f"<b>الصلاحيات:</b> مشرف + يملك صلاحية النشر.</blockquote>\n\n"
+                f"<i>تم التحقق بنجاح. يمكنك الآن إرسال الصور للبوت أو استخدام لوحة التحكم.</i>"
+            )
+            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("فتح لوحة التحكم", callback_data="main_menu"))
+            bot.edit_message_text(success_text, chat_id=call.message.chat.id, message_id=msg_loading.message_id, reply_markup=markup, parse_mode='HTML')
+            bot.answer_callback_query(call.id, "✅ تم التحقق بنجاح!")
+        else:
+            bot.edit_message_text("❌ البوت موجود في القناة، لكنه لا يملك صلاحية 'نشر الرسائل'. يرجى تعديل صلاحيات البوت في القناة والمحاولة مرة أخرى.", chat_id=call.message.chat.id, message_id=msg_loading.message_id)
+            
+    except Exception as e:
+        bot.edit_message_text(f"❌ حدث خطأ: {e}", chat_id=call.message.chat.id, message_id=msg_loading.message_id)
+
+# ================= 3. حفظ القناة تلقائياً عند إضافتها =================
+@bot.message_handler(content_types=['new_chat_members'])
+def bot_added_to_channel(message):
+    for member in message.new_chat_members:
+        if member.id == bot.get_me().id:
+            # إذا تمت إضافة البوت لقناة بواسطة مستخدم، نحفظها
+            adder_id = message.from_user.id
+            channel_identifier = f"@{message.chat.username}" if message.chat.username else str(message.chat.id)
+            
+            # نقوم بتحديث الذاكرة وحفظها في الملف
+            user_channels[str(adder_id)] = channel_identifier
+            save_db(user_channels)
+            
+            text = (
+                f"✅ <b>تمت إضافة البوت إلى القناة:</b> {message.chat.title}\n\n"
+                f"تم حفظ القناة في النظام. يمكنك الآن العودة للبوت والضغط على (التحقق من الرفع)."
+            )
+            try: bot.send_message(adder_id, text, parse_mode='HTML')
+            except: pass
+
+# ================= 4. لوحة التحكم =================
 def get_main_panel(user_id):
     settings = user_settings.get(user_id, get_default_settings())
     markup = InlineKeyboardMarkup(row_width=2)
@@ -73,7 +149,6 @@ def get_main_panel(user_id):
     )
     return markup
 
-# ================= 3. معالجة الأزرار =================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.from_user.id
@@ -183,10 +258,17 @@ def callback_handler(call):
             if settings["add_hashtags"]: final_text += f"\n\n{settings['hashtags']}"
             post_id = str(int(time.time()))
             
-            # نطلب من المستخدم اختيار القناة
-            bot.edit_message_text("⏳ جاري البحث عن قنواتك...", chat_id=call.message.chat.id, message_id=call.message.message_id)
-            find_and_show_channels(call.message.chat.id, post_id, 'text', None, final_text)
-            return bot.answer_callback_query(call.id, text="جاري البحث", show_alert=False)
+            target_channel = user_channels.get(str(user_id))
+            if not target_channel:
+                return bot.answer_callback_query(call.id, "⚠️ يرجى التحقق من رفع البوت في قناتك أولاً.", show_alert=True)
+            
+            pending_posts[post_id] = {'type': 'text', 'caption': final_text, 'channel': target_channel}
+            
+            markup = InlineKeyboardMarkup(row_width=3)
+            markup.add(InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}"))
+            
+            bot.edit_message_text(f"<b>معاينة قبل النشر:</b>\n\n{final_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
+            return bot.answer_callback_query(call.id, text="جاهز للنشر", show_alert=False)
 
         else:
             if action == "bold": data["bold"] = not data["bold"]
@@ -198,18 +280,14 @@ def callback_handler(call):
             bot.edit_message_text(f"معاينة النص:\n\n{new_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
             return bot.answer_callback_query(call.id, text="تم التحديث", show_alert=False)
 
-    # اختيار القناة
-    elif call.data.startswith("select_channel_"):
-        parts = call.data.split("_")
-        channel_id = parts[2]
-        post_id = parts[3]
-        
+    elif call.data.startswith("confirm_"):
+        post_id = call.data.split("_")[1]
         if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
         data = pending_posts[post_id]
-        
         try:
-            if data['type'] == 'photo': bot.send_photo(channel_id, data['file_id'], caption=data['caption'], parse_mode='HTML')
-            else: bot.send_message(channel_id, data['caption'], parse_mode='HTML')
+            target_channel = data['channel']
+            if data['type'] == 'photo': bot.send_photo(target_channel, data['file_id'], caption=data['caption'], parse_mode='HTML')
+            else: bot.send_message(target_channel, data['caption'], parse_mode='HTML')
             
             try: bot.delete_message(call.message.chat.id, call.message.message_id)
             except: pass
@@ -219,39 +297,18 @@ def callback_handler(call):
             del pending_posts[post_id]
         except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}")
 
-# ================= 4. البحث عن القنوات =================
-def find_and_show_channels(chat_id, post_id, post_type, file_id, caption):
-    # في البوتات، لا يمكن جلب قائمة القنوات مباشرة إلا إذا كان البوت مشرفاً فيها
-    # كحل بديل، نطلب من المستخدم إرسال معرف القناة (الرابط) أو إعادة إضافة البوت
-    # لكن لجعلها تعمل تلقائياً، سنستخدم طريقة "طلب الرابط"
-    
-    prompt_text = (
-        "<b>لم نتمكن من العثور على قناتك تلقائياً.</b>\n\n"
-        "يرجى إرسال رابط قناتك (مثال: @MyChannel) لكي ننشر فيها:"
-    )
-    msg = bot.send_message(chat_id, prompt_text, parse_mode='HTML')
-    bot.register_next_step_handler(msg, process_channel_link, post_id, post_type, file_id, caption)
+    elif call.data.startswith("schedule_"):
+        post_id = call.data.split("_")[1]
+        msg = bot.send_message(call.message.chat.id, "⏳ أرسل عدد الدقائق للتأجيل (مثال: 30):")
+        bot.register_next_step_handler(msg, process_schedule_time, post_id)
 
-def process_channel_link(message, post_id, post_type, file_id, caption):
-    channel_username = message.text.strip()
-    if not channel_username.startswith('@'):
-        channel_username = '@' + channel_username
-        
-    try:
-        # التحقق من أن البوت مشرف في القناة
-        chat_info = bot.get_chat(channel_username)
-        bot_member = bot.get_chat_member(channel_username, bot.get_me().id)
-        
-        if bot_member.status in ['administrator', 'creator']:
-            # البوت مشرف، يمكنه النشر
-            if post_type == 'photo': bot.send_photo(channel_username, file_id, caption=caption, parse_mode='HTML')
-            else: bot.send_message(channel_username, caption, parse_mode='HTML')
-            
-            bot.reply_to(message, "✅ تم النشر في القناة بنجاح!")
-        else:
-            bot.reply_to(message, "⚠️ البوت ليس مشرفاً في هذه القناة. يرجى إضافته كمشرف أولاً.")
-    except Exception as e:
-        bot.reply_to(message, f"❌ خطأ: تأكد من أن الرابط صحيح وأن البوت مشرف في القناة.\nالسبب: {e}")
+    elif call.data.startswith("cancel_"):
+        post_id = call.data.split("_")[1]
+        if post_id in pending_posts: del pending_posts[post_id]
+        try: bot.delete_message(call.message.chat.id, call.message.message_id)
+        except: pass
+        bot.answer_callback_query(call.id, text="تم إلغاء المنشور", show_alert=False)
+        bot.send_message(call.message.chat.id, "<b>مرحباً بك في لوحة التحكم</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(user_id), parse_mode='HTML')
 
 # ================= 5. استقبال الصور =================
 @bot.message_handler(content_types=['photo'])
@@ -259,6 +316,10 @@ def handle_photo(message):
     user_id = message.from_user.id
     settings = user_settings.get(user_id, get_default_settings())
     
+    target_channel = user_channels.get(str(user_id))
+    if not target_channel:
+        return bot.send_message(message.chat.id, "⚠️ يرجى إضافة البوت إلى قناتك أولاً، ثم الضغط على زر (التحقق من الرفع).", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel")))
+
     if settings["status"] == "OFF": return bot.send_message(message.chat.id, "معطل.", reply_markup=get_main_panel(user_id))
 
     msg_loading = bot.send_message(message.chat.id, "جاري التحليل...")
@@ -284,30 +345,63 @@ def handle_photo(message):
         if settings["add_hashtags"]: final_caption += f"\n\n{settings['hashtags']}"
 
         post_id = str(int(time.time()))
-        pending_posts[post_id] = {'type': 'photo', 'file_id': message.photo[-1].file_id, 'caption': final_caption}
+        pending_posts[post_id] = {'type': 'photo', 'file_id': message.photo[-1].file_id, 'caption': final_caption, 'channel': target_channel}
         
-        # عرض المعاينة مع خيارات النشر
-        markup = InlineKeyboardMarkup(row_width=2)
-        markup.add(InlineKeyboardButton("تحديد القناة والنشر", callback_data=f"ask_channel_{post_id}"))
-        markup.add(InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}"))
-        
+        markup = InlineKeyboardMarkup(row_width=2).add(
+            InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
+            InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
+            InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
+        )
         bot.delete_message(message.chat.id, msg_loading.message_id)
         bot.send_photo(message.chat.id, photo=message.photo[-1].file_id, caption=f"<b>معاينة:</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
     except Exception as e:
         bot.delete_message(message.chat.id, msg_loading.message_id)
         bot.send_message(message.chat.id, f"خطأ: {e}", reply_markup=get_main_panel(user_id))
 
-# ================= 6. طلب القناة =================
-@bot.callback_query_handler(func=lambda call: call.data.startswith("ask_channel_"))
-def ask_channel(call):
-    post_id = call.data.split("_")[2]
-    if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
-    data = pending_posts[post_id]
+@bot.message_handler(content_types=['text'])
+def handle_text(message):
+    user_id = message.from_user.id
+    settings = user_settings.get(user_id, get_default_settings())
     
-    find_and_show_channels(call.message.chat.id, post_id, data['type'], data.get('file_id'), data['caption'])
-    bot.answer_callback_query(call.id)
+    if message.text.startswith('/'): return
+    
+    if settings["text_only_mode"] and settings["status"] == "ON":
+        target_channel = user_channels.get(str(user_id))
+        if not target_channel:
+            return bot.send_message(message.chat.id, "⚠️ يرجى إضافة البوت إلى قناتك أولاً والتحقق من الرفع.")
+            
+        try: bot.delete_message(message.chat.id, message.message_id)
+        except: pass
+        
+        if settings['language'] == "مختلط":
+            lang_prompt = "اكتب العبارة باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمتها باللغة الإنجليزية تحت العربية."
+        else:
+            lang_prompt = f"باللغة {settings['language']}"
+            
+        prompt = f"اكتب عبارة قصيرة بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
+        
+        try:
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}], 
+                model="qwen/qwen3.8-27b",
+                max_tokens=500
+            )
+            ai_text = chat_completion.choices[0].message.content.strip()
+            final_caption = f"<b>{ai_text}</b>"
+            if settings["add_hashtags"]: final_caption += f"\n\n{settings['hashtags']}"
+            
+            post_id = str(int(time.time()))
+            pending_posts[post_id] = {'type': 'text', 'caption': final_caption, 'channel': target_channel}
+            markup = InlineKeyboardMarkup(row_width=3).add(
+                InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
+                InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
+                InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
+            )
+            bot.send_message(message.chat.id, f"<b>معاينة:</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+        except Exception as e:
+            bot.send_message(message.chat.id, f"خطأ: {e}")
 
-# ================= 7. الدوال المساعدة =================
+# ================= 6. لوحات مساعدة =================
 def get_lang_panel():
     markup = InlineKeyboardMarkup(row_width=3)
     markup.add(InlineKeyboardButton("عربي", callback_data="lang_عربي"), InlineKeyboardButton("إنجليزي", callback_data="lang_إنجليزي"), InlineKeyboardButton("مختلط", callback_data="lang_مختلط"))
@@ -345,6 +439,25 @@ def apply_formatting(data):
     if data["bold"]: text = f"<b>{text}</b>"
     if data["quote"]: text = f"<blockquote>{text}</blockquote>"
     return text
+
+def schedule_post(post_id, delay_minutes):
+    time.sleep(delay_minutes * 60)
+    if post_id in pending_posts:
+        data = pending_posts[post_id]
+        try:
+            target_channel = data['channel']
+            if data['type'] == 'photo': bot.send_photo(target_channel, data['file_id'], caption=data['caption'], parse_mode='HTML')
+            else: bot.send_message(target_channel, data['caption'], parse_mode='HTML')
+            del pending_posts[post_id]
+        except Exception as e: print(f"فشل النشر المجدول: {e}")
+
+def process_schedule_time(message, post_id):
+    try:
+        minutes = int(message.text)
+        if post_id in pending_posts:
+            bot.reply_to(message, f"✅ تم الجدولة بعد {minutes} دقيقة.")
+            threading.Thread(target=schedule_post, args=(post_id, minutes), daemon=True).start()
+    except: bot.reply_to(message, "❌ أرسل رقماً صحيحاً.")
 
 print("البوت العام يعمل...")
 bot.infinity_polling()
