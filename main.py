@@ -16,7 +16,6 @@ ADMIN_ID = 8456056018
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
 
-# ملف لحفظ قنوات المستخدمين (لكي لا تضيع عند إعادة التشغيل)
 DB_FILE = "user_channels.json"
 
 def load_db():
@@ -67,27 +66,25 @@ def send_welcome(message):
     markup.add(InlineKeyboardButton("2. التحقق من الرفع (فحص تلقائي)", callback_data="verify_channel"))
     markup.add(InlineKeyboardButton("المبرمج", url=f"tg://user?id={ADMIN_ID}"))
     
-    if user_id == ADMIN_ID:
+    # زر لوحة التحكم يظهر فقط إذا كان المستخدم قد تحقق مسبقاً أو كان المالك
+    if user_id == ADMIN_ID or str(user_id) in user_channels:
         markup.add(InlineKeyboardButton("فتح لوحة التحكم", callback_data="main_menu"))
 
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='HTML')
 
-# ================= 2. التحقق التلقائي من الرفع =================
+# ================= 2. التحقق التلقائي =================
 @bot.callback_query_handler(func=lambda call: call.data == "verify_channel")
 def verify_channel(call):
     user_id = call.from_user.id
     channel_id = user_channels.get(str(user_id))
     
     if not channel_id:
-        return bot.answer_callback_query(call.id, "⚠️ لم يتم العثور على قناة. يرجى إضافة البوت للقناة أولاً كـ مشرف، ثم المحاولة.", show_alert=True)
+        return bot.answer_callback_query(call.id, "⚠️ لم يتم العثور على القناة. يرجى إزالة البوت من القناة وإضافته مرة أخرى يدوياً (وليس من خلال الرابط).", show_alert=True)
 
     msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري فحص القناة والصلاحيات...")
 
     try:
-        # جلب معلومات القناة من الذاكرة
         chat_info = bot.get_chat(channel_id)
-        
-        # فحص صلاحيات البوت في القناة
         bot_member = bot.get_chat_member(channel_id, bot.get_me().id)
         
         if bot_member.status in ['administrator', 'creator'] and bot_member.can_post_messages:
@@ -97,7 +94,7 @@ def verify_channel(call):
                 f"<blockquote><b>الحالة:</b> ✅ ناجح\n"
                 f"<b>القناة:</b> {chat_info.title}\n"
                 f"<b>الصلاحيات:</b> مشرف + يملك صلاحية النشر.</blockquote>\n\n"
-                f"<i>تم التحقق بنجاح. يمكنك الآن إرسال الصور للبوت أو استخدام لوحة التحكم.</i>"
+                f"<i>تم التحقق بنجاح. يمكنك الآن استخدام البوت.</i>"
             )
             markup = InlineKeyboardMarkup().add(InlineKeyboardButton("فتح لوحة التحكم", callback_data="main_menu"))
             bot.edit_message_text(success_text, chat_id=call.message.chat.id, message_id=msg_loading.message_id, reply_markup=markup, parse_mode='HTML')
@@ -113,17 +110,15 @@ def verify_channel(call):
 def bot_added_to_channel(message):
     for member in message.new_chat_members:
         if member.id == bot.get_me().id:
-            # إذا تمت إضافة البوت لقناة بواسطة مستخدم، نحفظها
             adder_id = message.from_user.id
             channel_identifier = f"@{message.chat.username}" if message.chat.username else str(message.chat.id)
             
-            # نقوم بتحديث الذاكرة وحفظها في الملف
             user_channels[str(adder_id)] = channel_identifier
             save_db(user_channels)
             
             text = (
                 f"✅ <b>تمت إضافة البوت إلى القناة:</b> {message.chat.title}\n\n"
-                f"تم حفظ القناة في النظام. يمكنك الآن العودة للبوت والضغط على (التحقق من الرفع)."
+                f"تم حفظ القناة. يرجى العودة للبوت والضغط على (التحقق من الرفع) لفتح لوحة التحكم."
             )
             try: bot.send_message(adder_id, text, parse_mode='HTML')
             except: pass
@@ -149,9 +144,17 @@ def get_main_panel(user_id):
     )
     return markup
 
+# ================= 5. القفل الأمني (لا يُسمح بالمرور بدون تحقق) =================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.from_user.id
+    
+    # التحقق من القفل: إذا لم يكن مالكاً ولم يتم التحقق من قناته
+    if user_id != ADMIN_ID and str(user_id) not in user_channels:
+        # استثناء زر التحقق وزر الإضافة
+        if call.data not in ["verify_channel", "main_menu"]:
+            return bot.answer_callback_query(call.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً لتتمكن من استخدام الأزرار.", show_alert=True)
+
     settings = user_settings.get(user_id, get_default_settings())
 
     if call.data == "main_menu":
@@ -310,15 +313,17 @@ def callback_handler(call):
         bot.answer_callback_query(call.id, text="تم إلغاء المنشور", show_alert=False)
         bot.send_message(call.message.chat.id, "<b>مرحباً بك في لوحة التحكم</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(user_id), parse_mode='HTML')
 
-# ================= 5. استقبال الصور =================
+# ================= 6. استقبال الصور مع القفل الأمني =================
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
-    settings = user_settings.get(user_id, get_default_settings())
     
+    # القفل الأمني
+    if user_id != ADMIN_ID and str(user_id) not in user_channels:
+        return bot.send_message(message.chat.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً لتتمكن من إرسال الصور.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel")))
+
+    settings = user_settings.get(user_id, get_default_settings())
     target_channel = user_channels.get(str(user_id))
-    if not target_channel:
-        return bot.send_message(message.chat.id, "⚠️ يرجى إضافة البوت إلى قناتك أولاً، ثم الضغط على زر (التحقق من الرفع).", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel")))
 
     if settings["status"] == "OFF": return bot.send_message(message.chat.id, "معطل.", reply_markup=get_main_panel(user_id))
 
@@ -365,10 +370,12 @@ def handle_text(message):
     
     if message.text.startswith('/'): return
     
+    # القفل الأمني
+    if user_id != ADMIN_ID and str(user_id) not in user_channels:
+        return bot.send_message(message.chat.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel")))
+    
     if settings["text_only_mode"] and settings["status"] == "ON":
         target_channel = user_channels.get(str(user_id))
-        if not target_channel:
-            return bot.send_message(message.chat.id, "⚠️ يرجى إضافة البوت إلى قناتك أولاً والتحقق من الرفع.")
             
         try: bot.delete_message(message.chat.id, message.message_id)
         except: pass
@@ -401,7 +408,7 @@ def handle_text(message):
         except Exception as e:
             bot.send_message(message.chat.id, f"خطأ: {e}")
 
-# ================= 6. لوحات مساعدة =================
+# ================= 7. لوحات مساعدة =================
 def get_lang_panel():
     markup = InlineKeyboardMarkup(row_width=3)
     markup.add(InlineKeyboardButton("عربي", callback_data="lang_عربي"), InlineKeyboardButton("إنجليزي", callback_data="lang_إنجليزي"), InlineKeyboardButton("مختلط", callback_data="lang_مختلط"))
