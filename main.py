@@ -31,7 +31,6 @@ pending_posts = {}
 @bot.message_handler(content_types=['new_chat_members'])
 def welcome_new_members(message):
     for member in message.new_chat_members:
-        # جلب اسم المبرمج الحقيقي (أنت) من تيليجرام
         try:
             dev_info = bot.get_chat(ADMIN_ID)
             dev_name = dev_info.first_name
@@ -64,22 +63,16 @@ def welcome_new_members(message):
         except:
             pass
 
-# ================= 2. نظام الفحص الذكي (عند الرفع أو الفحص اليدوي) =================
+# ================= 2. نظام الفحص الذكي =================
 @bot.callback_query_handler(func=lambda call: call.data == "check_bot_status")
 def check_bot_status(call):
-    # حذف الرسالة السابقة لإظهار شاشة نظيفة
-    try: bot.delete_message(call.message.chat.id, call.message.message_id)
-    except: pass
-
     msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري فحص الاتصال بالقناة والصلاحيات...")
-    time.sleep(1.5) # تأثير بصري للفحص
+    time.sleep(1.5)
 
     try:
-        # الفحص الذكي: محاولة إرسال رسالة تجريبية للمرة الأولى
         test_msg = bot.send_message(CHANNEL_ID, "System Check...")
-        bot.delete_message(CHANNEL_ID, test_msg.message_id) # إذا نجح الإرسال، نحذف الرسالة فوراً
+        bot.delete_message(CHANNEL_ID, test_msg.message_id)
         
-        # إذا وصلنا هنا، يعني البوت مشرف ومرفوع بنجاح
         success_text = (
             f"<b>⟨ نتيجة الفحص ⟩</b>\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
@@ -92,12 +85,10 @@ def check_bot_status(call):
             f"<i>يمكنك الآن استخدام لوحة التحكم لإدارة القناة.</i>"
         )
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton("فتح القائمة الرئيسية", callback_data="main_menu"))
-        bot.delete_message(call.message.chat.id, msg_loading.message_id)
-        bot.send_message(call.message.chat.id, success_text, reply_markup=markup, parse_mode='HTML')
+        bot.edit_message_text(success_text, chat_id=call.message.chat.id, message_id=msg_loading.message_id, reply_markup=markup, parse_mode='HTML')
         bot.answer_callback_query(call.id, "✅ البوت يعمل بنجاح!")
 
     except Exception as e:
-        # إذا فشل الإرسال (البوت مطرود، أو ليس مشرفاً)
         error_text = (
             f"<b>⟨ نتيجة الفحص ⟩</b>\n"
             f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
@@ -111,11 +102,11 @@ def check_bot_status(call):
         markup = InlineKeyboardMarkup(row_width=1)
         markup.add(
             InlineKeyboardButton("إعادة الفحص", callback_data="check_bot_status"),
-            InlineKeyboardButton("إضافة البوت للقناة", url=f"https://t.me/{bot.get_me().username}?startchannel=true")
+            InlineKeyboardButton("إضافة البوت للقناة", url=f"https://t.me/{bot.get_me().username}?startchannel=true"),
+            InlineKeyboardButton("رجوع للقائمة", callback_data="main_menu")
         )
-        bot.delete_message(call.message.chat.id, msg_loading.message_id)
-        bot.send_message(call.message.chat.id, error_text, reply_markup=markup, parse_mode='HTML')
-        bot.answer_callback_query(call.id, "❌ فشل الفحص، يرجى المراجعة.")
+        bot.edit_message_text(error_text, chat_id=call.message.chat.id, message_id=msg_loading.message_id, reply_markup=markup, parse_mode='HTML')
+        bot.answer_callback_query(call.id, "❌ فشل الفحص.")
 
 # ================= 3. لوحات التحكم =================
 def get_main_panel():
@@ -184,16 +175,21 @@ def send_welcome(message):
     welcome_text = "<b>مرحباً بك في نظام إدارة عالم الأحمر</b>\n\nهذه هي لوحة التحكم الرئيسية. اختر الإجراء الذي تريده من الأزرار أدناه."
     bot.send_message(message.chat.id, welcome_text, reply_markup=get_main_panel(), parse_mode='HTML')
 
-# ================= 5. معالجة الأزرار =================
+# ================= 5. معالجة الأزرار (تعديل الرسائل بدلاً من حذفها) =================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     if call.from_user.id != ADMIN_ID: return
 
+    # 1. زر الرجوع للقائمة الرئيسية
     if call.data == "main_menu":
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-        bot.send_message(call.message.chat.id, "<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", reply_markup=get_main_panel(), parse_mode='HTML')
+        bot.edit_message_text("<b>القائمة الرئيسية:</b>\nاختر ما تريد القيام به:", 
+                              chat_id=call.message.chat.id, 
+                              message_id=call.message.message_id, 
+                              reply_markup=get_main_panel(), 
+                              parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
+    # 2. التفعيل والتعطيل
     elif call.data == "toggle_status":
         settings["status"] = "OFF" if settings["status"] == "ON" else "ON"
         bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
@@ -204,6 +200,7 @@ def callback_handler(call):
         bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=get_main_panel())
         return bot.answer_callback_query(call.id, text=f"وضع النشر النصي: {'مفعل' if settings['text_only_mode'] else 'معطل'}")
 
+    # 3. اللغات
     elif call.data == "menu_lang":
         text = "<b>إعدادات اللغة:</b>\n\nهذا الزر يحدد لغة العبارات التي سيولدها الذكاء الاصطناعي (عربي، إنجليزي، أو خليط بينهما)."
         bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_lang_panel(), parse_mode='HTML')
@@ -211,10 +208,14 @@ def callback_handler(call):
 
     elif call.data.startswith("lang_"):
         settings["language"] = call.data.replace("lang_", "")
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-        bot.send_message(call.message.chat.id, f"تم تحديث اللغة إلى: <b>{settings['language']}</b>", reply_markup=get_main_panel(), parse_mode='HTML')
+        bot.edit_message_text(f"<b>القائمة الرئيسية:</b>\nتم تحديث اللغة إلى: <b>{settings['language']}</b>", 
+                              chat_id=call.message.chat.id, 
+                              message_id=call.message.message_id, 
+                              reply_markup=get_main_panel(), 
+                              parse_mode='HTML')
         return bot.answer_callback_query(call.id, text="تم التحديث")
 
+    # 4. الفئات
     elif call.data == "menu_categories":
         text = "<b>فئات العبارات:</b>\n\nهذا الزر يحدد (أسلوب) النص الذي سيكتبه البوت. اختر الفئة التي تناسب جو القناة."
         bot.edit_message_text(text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_categories_panel(), parse_mode='HTML')
@@ -222,12 +223,15 @@ def callback_handler(call):
 
     elif call.data.startswith("cat_"):
         settings["category"] = call.data.replace("cat_", "")
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-        bot.send_message(call.message.chat.id, f"تم اختيار فئة: <b>{settings['category']}</b>", reply_markup=get_main_panel(), parse_mode='HTML')
+        bot.edit_message_text(f"<b>القائمة الرئيسية:</b>\nتم اختيار فئة: <b>{settings['category']}</b>", 
+                              chat_id=call.message.chat.id, 
+                              message_id=call.message.message_id, 
+                              reply_markup=get_main_panel(), 
+                              parse_mode='HTML')
         return bot.answer_callback_query(call.id, text="تم التحديث")
 
+    # 5. السورس
     elif call.data == "show_source":
-        # سحب اسم المطور الحقيقي تلقائياً
         try:
             dev_info = bot.get_chat(ADMIN_ID)
             dev_name = dev_info.first_name
@@ -249,6 +253,7 @@ def callback_handler(call):
         bot.edit_message_text(source_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
         return bot.answer_callback_query(call.id, text="معلومات السورس")
 
+    # 6. توليد العبارة
     elif call.data == "generate_text":
         bot.answer_callback_query(call.id, text="جاري التوليد...")
         lang_prompt = f"باللغة {settings['language']}" if settings['language'] != "مختلط" else "مزيج بين العربية والإنجليزية"
@@ -263,6 +268,7 @@ def callback_handler(call):
         except Exception as e:
             bot.send_message(call.message.chat.id, f"خطأ: {e}")
 
+    # 7. أزرار التنسيق
     elif call.data.startswith('fmt_'):
         parts = call.data.split('_')
         action, msg_id = parts[1], parts[2]
@@ -300,6 +306,48 @@ def callback_handler(call):
             bot.edit_message_text(f"معاينة النص:\n\n{new_text}", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
             return bot.answer_callback_query(call.id, "تم التحديث")
 
+    # 8. الفحص الذكي
+    elif call.data == "check_bot_status":
+        try:
+            test_msg = bot.send_message(CHANNEL_ID, "System Check...")
+            bot.delete_message(CHANNEL_ID, test_msg.message_id)
+            
+            success_text = (
+                f"<b>⟨ نتيجة الفحص ⟩</b>\n"
+                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+                f"<blockquote>"
+                f"<b>الحالة:</b> ✅ ناجح\n"
+                f"<b>الاتصال:</b> البوت مرفوع ومشرف في القناة.\n"
+                f"<b>الصلاحيات:</b> يمتلك صلاحية النشر.\n"
+                f"</blockquote>\n"
+                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+                f"<i>يمكنك الآن استخدام لوحة التحكم لإدارة القناة.</i>"
+            )
+            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("فتح القائمة الرئيسية", callback_data="main_menu"))
+            bot.edit_message_text(success_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
+            bot.answer_callback_query(call.id, "✅ البوت يعمل بنجاح!")
+
+        except Exception as e:
+            error_text = (
+                f"<b>⟨ نتيجة الفحص ⟩</b>\n"
+                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+                f"<blockquote>"
+                f"<b>الحالة:</b> ❌ فشل\n"
+                f"<b>السبب:</b> البوت ليس مشرفاً في القناة أو تم طرده.\n"
+                f"</blockquote>\n"
+                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+                f"<i>يرجى رفع البوت كمشرف وإعطائه صلاحية 'نشر الرسائل' ثم إعادة الفحص.</i>"
+            )
+            markup = InlineKeyboardMarkup(row_width=1)
+            markup.add(
+                InlineKeyboardButton("إعادة الفحص", callback_data="check_bot_status"),
+                InlineKeyboardButton("إضافة البوت للقناة", url=f"https://t.me/{bot.get_me().username}?startchannel=true"),
+                InlineKeyboardButton("رجوع للقائمة", callback_data="main_menu")
+            )
+            bot.edit_message_text(error_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
+            bot.answer_callback_query(call.id, "❌ فشل الفحص.")
+
+    # 9. المعاينة
     elif call.data.startswith("confirm_"):
         post_id = call.data.split("_")[1]
         if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
