@@ -26,8 +26,8 @@ DB_FILE = "user_channels.json"
 STATS_FILE = "stats.json"
 
 # متغيرات لحفظ الحالة مؤقتاً
-audio_edit_state = {} # لحقوق النشر
-pending_audio_merge = {} # لدمج الصورة مع الصوت
+audio_edit_state = {} 
+pending_audio_merge = {} 
 
 def load_json(file):
     if os.path.exists(file):
@@ -227,7 +227,7 @@ def get_main_panel(user_id):
     markup.add(InlineKeyboardButton("مغادرة القناة (إلغاء الارتباط)", callback_data="leave_channel"))
     return markup
 
-# ================= 6. نظام حقوق النشر الصوتي (المنفصل) =================
+# ================= 6. نظام حقوق النشر الصوتي =================
 @bot.callback_query_handler(func=lambda call: call.data == "start_audio_edit")
 def start_audio_edit(call):
     user_id = call.from_user.id
@@ -315,11 +315,9 @@ def handle_audio_merge(message):
         
         msg_loading = bot.send_message(message.chat.id, "⏳ جاري معالجة الملف ودمجه مع الصورة...")
         try:
-            # تحميل الملف الصوتي
             file_info = bot.get_file(file_id)
             audio_data = bot.download_file(file_info.file_path)
             
-            # تحميل الصورة كغلاف
             photo_file_info = bot.get_file(data['photo_id'])
             photo_data = bot.download_file(photo_file_info.file_path)
             
@@ -335,13 +333,11 @@ def handle_audio_merge(message):
             audio.save(audio_buffer)
             audio_buffer.seek(0)
 
-            # إرسال المعاينة النهائية (صوت + نص)
             markup = InlineKeyboardMarkup(row_width=2).add(
                 InlineKeyboardButton("نشر في القناة", callback_data=f"publish_audio_{user_id}"),
                 InlineKeyboardButton("إلغاء", callback_data=f"cancel_audio_{user_id}")
             )
             
-            # نحفظ الملف في الذاكرة لنشره لاحقاً
             pending_audio_merge[user_id]['audio_buffer'] = audio_buffer
             
             bot.delete_message(message.chat.id, msg_loading.message_id)
@@ -477,6 +473,7 @@ def callback_handler(call):
             pending_posts[new_post_id] = {'type': 'photo', 'file_id': photo_id, 'caption': final_caption, 'channel': target_channel}
             saved_images[new_post_id] = data 
             
+            # هنا أضفنا زر إضافة ملف صوتي في المعاينة الجديدة
             markup = InlineKeyboardMarkup(row_width=2).add(
                 InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{new_post_id}"), 
                 InlineKeyboardButton("جدولة", callback_data=f"schedule_{new_post_id}"), 
@@ -775,6 +772,7 @@ def process_single_photo(message, settings, target_channel):
             'channel': target_channel
         }
         
+        # هنا أضفنا زر إضافة ملف صوتي في المعاينة الأولى
         markup = InlineKeyboardMarkup(row_width=2).add(
             InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
             InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
