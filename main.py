@@ -51,6 +51,7 @@ user_settings = {}
 generated_texts = {}
 pending_posts = {}
 media_groups = {} 
+saved_images = {} # <--- جديد: لتخزين بيانات الصورة لإعادة التوليد
 
 # ================= دالة فحص الاشتراك الإجباري =================
 def check_subscription(user_id):
@@ -556,10 +557,18 @@ def process_single_photo(message, settings, target_channel):
 
         post_id = str(int(time.time()))
         pending_posts[post_id] = {'type': 'photo', 'file_id': message.photo[-1].file_id, 'caption': final_caption, 'channel': target_channel}
+        # حفظ بيانات الصورة لإعادة التوليد
+        saved_images[post_id] = {
+            'photo_id': message.photo[-1].file_id,
+            'user_id': message.from_user.id,
+            'settings': settings,
+            'channel': target_channel
+        }
         
         markup = InlineKeyboardMarkup(row_width=2).add(
             InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), 
             InlineKeyboardButton("جدولة", callback_data=f"schedule_{post_id}"), 
+            InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_image_{post_id}"), # <--- زر جديد
             InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
         )
         bot.delete_message(message.chat.id, msg_loading.message_id)
@@ -567,6 +576,65 @@ def process_single_photo(message, settings, target_channel):
     except Exception as e:
         bot.delete_message(message.chat.id, msg_loading.message_id)
         bot.send_message(message.chat.id, f"خطأ: {e}", reply_markup=get_main_panel(message.from_user.id))
+
+# ================= دالة إعادة توليد العبارة للصورة =================
+@bot.callback_query_handler(func=lambda call: call.data.startswith("regen_image_"))
+def regen_image(call):
+    post_id = call.data.split("_")[2]
+    if post_id not in saved_images: return bot.answer_callback_query(call.id, "انتهت الصلاحية", show_alert=True)
+    
+    data = saved_images[post_id]
+    photo_id = data['photo_id']
+    settings = data['settings']
+    target_channel = data['channel']
+    user_id = call.from_user.id
+    
+    bot.answer_callback_query(call.id, "جاري توليد عبارة جديدة...", show_alert=False)
+    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري إعادة التحليل...")
+    
+    try:
+        file_info = bot.get_file(photo_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        base64_image = base64.b64encode(downloaded_file).decode('utf-8')
+        
+        if settings['language'] == "مختلط":
+            lang_prompt = (
+                "اكتب جملة واحدة فقط باللغة العربية (لا تتجاوز 10 كلمات). "
+                "ثم اكتب ترجمتها الإنجليزية في سطر واحد فقط تحت العربية. "
+                "لا تزد عن سطرين في المجموع. بدون إيموجي."
+            )
+        else:
+            lang_prompt = f"باللغة {settings['language']}"
+            
+        prompt = f"اكتب تعليقاً قصيراً جداً (سطر واحد فقط) بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
+        
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
+            model="qwen/qwen3.8-27b",
+            max_tokens=500
+        )
+        ai_text = chat_completion.choices[0].message.content.strip()
+        final_caption = f"<b>{ai_text}</b>"
+        if settings["add_hashtags"]: final_caption += f"\n\n{settings['hashtags']}"
+        
+        new_post_id = str(int(time.time()))
+        pending_posts[new_post_id] = {'type': 'photo', 'file_id': photo_id, 'caption': final_caption, 'channel': target_channel}
+        saved_images[new_post_id] = data # تحديث البيانات
+        
+        markup = InlineKeyboardMarkup(row_width=2).add(
+            InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{new_post_id}"), 
+            InlineKeyboardButton("جدولة", callback_data=f"schedule_{new_post_id}"), 
+            InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_image_{new_post_id}"),
+            InlineKeyboardButton("إلغاء", callback_data=f"cancel_{new_post_id}")
+        )
+        
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        bot.delete_message(call.message.chat.id, msg_loading.message_id)
+        bot.send_photo(call.message.chat.id, photo=photo_id, caption=f"<b>معاينة جديدة:</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+        
+    except Exception as e:
+        bot.delete_message(call.message.chat.id, msg_loading.message_id)
+        bot.send_message(call.message.chat.id, f"خطأ: {e}")
 
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
