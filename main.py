@@ -50,7 +50,7 @@ def get_default_settings():
 user_settings = {} 
 generated_texts = {}
 pending_posts = {}
-media_groups = {} # لتجميع صور الألبوم
+media_groups = {} 
 
 # ================= دالة فحص الاشتراك الإجباري =================
 def check_subscription(user_id):
@@ -250,14 +250,18 @@ def handle_generate_text(call):
     bot.answer_callback_query(call.id, text="جاري التوليد...", show_alert=False)
     
     if settings['language'] == "مختلط":
-        lang_prompt = "اكتب العبارة باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمتها باللغة الإنجليزية تحت العربية."
+        lang_prompt = (
+            "اكتب جملة واحدة فقط باللغة العربية (لا تتجاوز 10 كلمات). "
+            "ثم اكتب ترجمتها الإنجليزية في سطر واحد فقط تحت العربية. "
+            "لا تزد عن سطرين في المجموع. بدون إيموجي."
+        )
     else:
         lang_prompt = f"باللغة {settings['language']}"
 
     if call.data == "generate_long_text":
-        prompt = f"اكتب عبارة مفصلة (من 3 إلى 4 أسطر) بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها {bot.get_me().first_name}. بدون إيموجي."
+        prompt = f"اكتب عبارة مفيدة (من 3 إلى 4 أسطر) بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها {bot.get_me().first_name}. بدون إيموجي."
     else:
-        prompt = f"اكتب عبارة قصيرة جداً تتكون من سطرين فقط بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها {bot.get_me().first_name}. بدون إيموجي."
+        prompt = f"اكتب عبارة قصيرة جداً (سطر واحد فقط) بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها {bot.get_me().first_name}. بدون إيموجي."
 
     try:
         chat_completion = client.chat.completions.create(
@@ -408,7 +412,6 @@ def callback_handler(call):
             else: 
                 bot.send_message(target_channel, data['caption'], parse_mode='HTML')
             
-            # تحديث الإحصائيات
             stats["published_count"] += 1
             save_json(STATS_FILE, stats)
             
@@ -433,7 +436,7 @@ def callback_handler(call):
         bot.answer_callback_query(call.id, text="تم إلغاء المنشور", show_alert=False)
         bot.send_message(call.message.chat.id, "<b>مرحباً بك في لوحة التحكم</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(user_id), parse_mode='HTML')
 
-# ================= 9. استقبال الصور (مع نظام الألبوم) =================
+# ================= 9. استقبال الصور =================
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
@@ -457,17 +460,15 @@ def handle_photo(message):
             }
         media_groups[message.media_group_id]['photos'].append(message.photo[-1].file_id)
         
-        # مؤقت لانتظار باقي صور الألبوم
         threading.Timer(2.0, process_album, args=[message.media_group_id, message.chat.id]).start()
         return
 
-    # إذا كانت صورة منفردة (نفس النظام القديم)
     process_single_photo(message, settings, target_channel)
 
 def process_album(group_id, chat_id):
     if group_id not in media_groups: return
     data = media_groups[group_id]
-    del media_groups[group_id] # مسح المجموعة بعد المعالجة
+    del media_groups[group_id] 
     
     photos = data['photos']
     user_id = data['user_id']
@@ -477,17 +478,20 @@ def process_album(group_id, chat_id):
     msg_loading = bot.send_message(chat_id, "جاري تحليل الألبوم...")
     
     try:
-        # نأخذ أول صورة لتحليلها بالذكاء الاصطناعي
         file_info = bot.get_file(photos[0])
         downloaded_file = bot.download_file(file_info.file_path)
         base64_image = base64.b64encode(downloaded_file).decode('utf-8')
         
         if settings['language'] == "مختلط":
-            lang_prompt = "اكتب التعليق باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمته باللغة الإنجليزية تحت العربية."
+            lang_prompt = (
+                "اكتب جملة واحدة فقط باللغة العربية (لا تتجاوز 10 كلمات). "
+                "ثم اكتب ترجمتها الإنجليزية في سطر واحد فقط تحت العربية. "
+                "لا تزد عن سطرين في المجموع. بدون إيموجي."
+            )
         else:
             lang_prompt = f"باللغة {settings['language']}"
             
-        prompt = f"اكتب تعليقاً قصيراً بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
+        prompt = f"اكتب تعليقاً قصيراً جداً (سطر واحد فقط) بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
         
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
@@ -500,7 +504,6 @@ def process_album(group_id, chat_id):
         
         post_id = str(int(time.time()))
         
-        # تجهيز وسائط الألبوم
         media = []
         for i, photo_id in enumerate(photos):
             if i == 0:
@@ -517,7 +520,7 @@ def process_album(group_id, chat_id):
         )
         
         bot.delete_message(chat_id, msg_loading.message_id)
-        bot.send_media_group(chat_id, media) # إرسال المعاينة كألبوم
+        bot.send_media_group(chat_id, media) 
         bot.send_message(chat_id, "هل تريد نشر هذا الألبوم؟", reply_markup=markup)
         
     except Exception as e:
@@ -532,11 +535,15 @@ def process_single_photo(message, settings, target_channel):
         base64_image = base64.b64encode(downloaded_file).decode('utf-8')
         
         if settings['language'] == "مختلط":
-            lang_prompt = "اكتب التعليق باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمته باللغة الإنجليزية تحت العربية."
+            lang_prompt = (
+                "اكتب جملة واحدة فقط باللغة العربية (لا تتجاوز 10 كلمات). "
+                "ثم اكتب ترجمتها الإنجليزية في سطر واحد فقط تحت العربية. "
+                "لا تزد عن سطرين في المجموع. بدون إيموجي."
+            )
         else:
             lang_prompt = f"باللغة {settings['language']}"
             
-        prompt = f"اكتب تعليقاً قصيراً بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
+        prompt = f"اكتب تعليقاً قصيراً جداً (سطر واحد فقط) بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
         
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
@@ -578,11 +585,15 @@ def handle_text(message):
         except: pass
         
         if settings['language'] == "مختلط":
-            lang_prompt = "اكتب العبارة باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمتها باللغة الإنجليزية تحت العربية."
+            lang_prompt = (
+                "اكتب جملة واحدة فقط باللغة العربية (لا تتجاوز 10 كلمات). "
+                "ثم اكتب ترجمتها الإنجليزية في سطر واحد فقط تحت العربية. "
+                "لا تزد عن سطرين في المجموع. بدون إيموجي."
+            )
         else:
             lang_prompt = f"باللغة {settings['language']}"
             
-        prompt = f"اكتب عبارة قصيرة بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
+        prompt = f"اكتب عبارة قصيرة جداً (سطر واحد فقط) بأسلوب {settings['category']} {lang_prompt}. بدون إيموجي."
         
         try:
             chat_completion = client.chat.completions.create(
@@ -654,7 +665,6 @@ def schedule_post(post_id, delay_minutes):
             elif data['type'] == 'album': bot.send_media_group(target_channel, data['media'])
             else: bot.send_message(target_channel, data['caption'], parse_mode='HTML')
             
-            # تحديث الإحصائيات
             stats["published_count"] += 1
             save_json(STATS_FILE, stats)
             
