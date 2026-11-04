@@ -7,11 +7,16 @@ import datetime
 import threading
 import json
 import os
+import requests
+import pingrabber
 
 # ================= الإعدادات =================
 TELEGRAM_TOKEN = '8386513995:AAH6GWopP1_8jWCVZvUj_Yix1pjYNt_zGts'
 GROQ_API_KEY = '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'
 ADMIN_ID = 8456056018 
+
+# قنوات الاشتراك الإجباري
+FORCE_CHANNELS = ["@Eror_7", "@lb2_c"]
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
@@ -44,10 +49,42 @@ user_settings = {}
 generated_texts = {}
 pending_posts = {}
 
-# ================= 1. الترحيب =================
+# ================= دالة فحص الاشتراك الإجباري =================
+def check_subscription(user_id):
+    for channel in FORCE_CHANNELS:
+        try:
+            member = bot.get_chat_member(channel, user_id)
+            if member.status not in ['member', 'administrator', 'creator']:
+                return False, channel
+        except Exception:
+            # إذا فشل الفحص (البوت ليس مشرفاً أو القناة خاطئة)، نعتبره غير مشترك لتجنب الأخطاء
+            return False, channel
+    return True, None
+
+def send_force_sub_message(chat_id):
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(InlineKeyboardButton("اشترك في القناة الأولى (@Eror_7)", url="https://t.me/Eror_7"))
+    markup.add(InlineKeyboardButton("اشترك في القناة الثانية (@lb2_c)", url="https://t.me/lb2_c"))
+    markup.add(InlineKeyboardButton("تحقق من الاشتراك ✅", callback_data="check_sub"))
+    
+    text = (
+        "<b>⛔ عذراً، يجب عليك الاشتراك في القنوات التالية أولاً لاستخدام البوت:</b>\n\n"
+        "1. @Eror_7\n"
+        "2. @lb2_c\n\n"
+        "بعد الاشتراك، اضغط على زر (تحقق من الاشتراك)."
+    )
+    bot.send_message(chat_id, text, reply_markup=markup, parse_mode='HTML')
+
+# ================= 1. الترحيب (مع الفحص) =================
 @bot.message_handler(commands=['start', 'panel'])
 def send_welcome(message):
     user_id = message.from_user.id
+    
+    # فحص الاشتراك الإجباري
+    is_subscribed, _ = check_subscription(user_id)
+    if not is_subscribed and user_id != ADMIN_ID:
+        return send_force_sub_message(message.chat.id)
+
     if user_id not in user_settings:
         user_settings[user_id] = get_default_settings()
 
@@ -71,9 +108,27 @@ def send_welcome(message):
 
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='HTML')
 
-# ================= 2. التحقق المزدوج =================
+# ================= 2. زر التحقق من الاشتراك =================
+@bot.callback_query_handler(func=lambda call: call.data == "check_sub")
+def check_sub(call):
+    user_id = call.from_user.id
+    is_subscribed, _ = check_subscription(user_id)
+    
+    if is_subscribed:
+        bot.answer_callback_query(call.id, "✅ تم التحقق بنجاح! أهلاً بك.", show_alert=True)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        send_welcome(call.message)
+    else:
+        bot.answer_callback_query(call.id, "❌ لم تشترك في جميع القنوات بعد. يرجى الاشتراك ثم المحاولة.", show_alert=True)
+
+# ================= 3. التحقق المزدوج =================
 @bot.callback_query_handler(func=lambda call: call.data == "verify_channel")
 def verify_channel(call):
+    # فحص الاشتراك أولاً
+    is_subscribed, _ = check_subscription(call.from_user.id)
+    if not is_subscribed and call.from_user.id != ADMIN_ID:
+        return bot.answer_callback_query(call.id, "⛔ يجب الاشتراك في القنوات أولاً.", show_alert=True)
+
     bot.answer_callback_query(call.id, "جاري الفحص...")
     user_id = call.from_user.id
     channel_id = user_channels.get(str(user_id))
@@ -117,7 +172,7 @@ def perform_verification(chat_id, user_id, channel_id):
     except Exception as e:
         bot.edit_message_text(f"❌ حدث خطأ: {e}\nتأكد من أن البوت مشرف في القناة ومن صحة المعرف.", chat_id=chat_id, message_id=msg_loading.message_id)
 
-# ================= 3. حفظ القناة تلقائياً عند إضافتها =================
+# ================= 4. حفظ القناة تلقائياً عند إضافتها =================
 @bot.message_handler(content_types=['new_chat_members'])
 def bot_added_to_channel(message):
     for member in message.new_chat_members:
@@ -135,7 +190,7 @@ def bot_added_to_channel(message):
             try: bot.send_message(adder_id, text, parse_mode='HTML')
             except: pass
 
-# ================= 4. لوحة التحكم =================
+# ================= 5. لوحة التحكم =================
 def get_main_panel(user_id):
     settings = user_settings.get(user_id, get_default_settings())
     markup = InlineKeyboardMarkup(row_width=2)
@@ -151,18 +206,104 @@ def get_main_panel(user_id):
         InlineKeyboardButton(f"اللغة: {settings['language']}", callback_data="menu_lang")
     )
     markup.add(
-        InlineKeyboardButton("توليد عبارة مستقلة", callback_data="generate_text"),
-        InlineKeyboardButton("السورس", callback_data="show_source")
+        InlineKeyboardButton("عبارات طويلة", callback_data="generate_long_text"),
+        InlineKeyboardButton("عبارات مختصرة", callback_data="generate_short_text")
     )
-    # إضافة زر مغادرة القناة
+    markup.add(
+        InlineKeyboardButton("السورس", callback_data="show_source"),
+        InlineKeyboardButton("تحميل صورة من Pinterest", callback_data="fetch_pinterest")
+    )
     markup.add(InlineKeyboardButton("مغادرة القناة (إلغاء الارتباط)", callback_data="leave_channel"))
     return markup
 
-# ================= 5. القفل الأمني =================
+# ================= 6. توليد العبارات (طويلة / مختصرة) =================
+@bot.callback_query_handler(func=lambda call: call.data in ["generate_long_text", "generate_short_text"])
+def handle_generate_text(call):
+    # فحص الاشتراك
+    is_subscribed, _ = check_subscription(call.from_user.id)
+    if not is_subscribed and call.from_user.id != ADMIN_ID:
+        return bot.answer_callback_query(call.id, "⛔ يجب الاشتراك في القنوات أولاً.", show_alert=True)
+
+    user_id = call.from_user.id
+    settings = user_settings.get(user_id, get_default_settings())
+    
+    bot.answer_callback_query(call.id, text="جاري التوليد...", show_alert=False)
+    
+    if settings['language'] == "مختلط":
+        lang_prompt = "اكتب العبارة باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمتها باللغة الإنجليزية تحت العربية."
+    else:
+        lang_prompt = f"باللغة {settings['language']}"
+
+    if call.data == "generate_long_text":
+        prompt = f"اكتب عبارة مفصلة (من 3 إلى 4 أسطر) بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها {bot.get_me().first_name}. بدون إيموجي."
+    else:
+        prompt = f"اكتب عبارة قصيرة جداً تتكون من سطرين فقط بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها {bot.get_me().first_name}. بدون إيموجي."
+
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}], 
+            model="qwen/qwen3.8-27b",
+            max_tokens=500
+        )
+        raw_text = chat_completion.choices[0].message.content.strip()
+        msg_id = str(int(time.time()))
+        generated_texts[msg_id] = {"raw": raw_text, "bold": False, "italic": False, "strike": False, "quote": False, "user_id": user_id}
+        send_formatting_panel(call.message.chat.id, msg_id)
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+    except Exception as e:
+        bot.send_message(call.message.chat.id, f"خطأ: {e}")
+
+# ================= 7. نظام بينتريست =================
+@bot.callback_query_handler(func=lambda call: call.data == "fetch_pinterest")
+def fetch_pinterest(call):
+    user_id = call.from_user.id
+    is_subscribed, _ = check_subscription(user_id)
+    if not is_subscribed and user_id != ADMIN_ID:
+        return bot.answer_callback_query(call.id, "⛔ يجب الاشتراك في القنوات أولاً.", show_alert=True)
+    
+    if user_id != ADMIN_ID and str(user_id) not in user_channels:
+        return bot.answer_callback_query(call.id, "⚠️ يجب التحقق من القناة أولاً.", show_alert=True)
+    
+    bot.answer_callback_query(call.id, "جاري البحث...")
+    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحميل صورة حمراء من Pinterest...")
+
+    try:
+        query = "dark red aesthetic"
+        links = pingrabber.search(query)
+        
+        if not links:
+            bot.edit_message_text("❌ لم يتم العثور على صور.", chat_id=call.message.chat.id, message_id=msg_loading.message_id)
+            return
+
+        img_url = links[0]
+        img_data = requests.get(img_url).content
+
+        post_id = str(int(time.time()))
+        pending_posts[post_id] = {'type': 'photo', 'file_id': img_data, 'caption': "معاينة صورة من Pinterest", 'channel': user_channels[str(user_id)]}
+
+        markup = InlineKeyboardMarkup(row_width=2).add(
+            InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"),
+            InlineKeyboardButton("إلغاء", callback_data=f"cancel_{post_id}")
+        )
+        
+        bot.delete_message(call.message.chat.id, msg_loading.message_id)
+        bot.send_photo(call.message.chat.id, photo=img_data, caption="<b>صورة حمراء من Pinterest:</b>\nهل تريد نشرها في قناتك؟", reply_markup=markup, parse_mode='HTML')
+
+    except Exception as e:
+        bot.edit_message_text(f"❌ حدث خطأ أثناء التحميل: {e}", chat_id=call.message.chat.id, message_id=msg_loading.message_id)
+
+# ================= 8. القفل الأمني ومعالجة الأزرار =================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.from_user.id
     
+    # 1. فحص الاشتراك الإجباري (لكل الأزرار ما عدا التحقق)
+    if call.data not in ["check_sub", "verify_channel"]:
+        is_subscribed, _ = check_subscription(user_id)
+        if not is_subscribed and user_id != ADMIN_ID:
+            return bot.answer_callback_query(call.id, "⛔ يجب الاشتراك في القنوات أولاً.", show_alert=True)
+
+    # 2. القفل الأمني (التحقق من رفع البوت)
     if user_id != ADMIN_ID and str(user_id) not in user_channels:
         if call.data not in ["verify_channel", "main_menu"]:
             return bot.answer_callback_query(call.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً لتتمكن من استخدام الأزرار.", show_alert=True)
@@ -179,30 +320,14 @@ def callback_handler(call):
             bot.edit_message_text(main_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(user_id), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
-    # نظام مغادرة القناة
     elif call.data == "leave_channel":
         if str(user_id) in user_channels:
             del user_channels[str(user_id)]
             save_db(user_channels)
-            
-            bot.answer_callback_query(call.id, text="✅ تم إلغاء ارتباط القناة بنجاح.", show_alert=True)
-            
-            # العودة لرسالة الترحيب لإضافة قناة جديدة
-            welcome_text = (
-                f"<b>⟨ مرحباً بك في R W | Bot ⟩</b>\n"
-                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-                f"تم إلغاء ارتباط القناة السابقة. يمكنك الآن إضافة قناة جديدة.\n\n"
-                f"<b>الخطوات:</b>\n"
-                f"1. أضف البوت إلى قناتك الجديدة (كـ مشرف).\n"
-                f"2. ارجع هنا واضغط على زر (التحقق من الرفع)."
-            )
-            markup = InlineKeyboardMarkup(row_width=1)
-            markup.add(InlineKeyboardButton("إضافة البوت لقناتك", url=f"https://t.me/{bot.get_me().username}?startchannel=true"))
-            markup.add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel"))
-            
-            bot.edit_message_text(welcome_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
+            bot.answer_callback_query(call.id, text="✅ تم إلغاء ارتباط القناة.", show_alert=True)
+            send_welcome(call.message)
         else:
-            bot.answer_callback_query(call.id, "⚠️ لا توجد قناة مرتبطة بحسابك حالياً.", show_alert=True)
+            bot.answer_callback_query(call.id, "⚠️ لا توجد قناة مرتبطة.", show_alert=True)
         return
 
     elif call.data == "toggle_status":
@@ -258,29 +383,6 @@ def callback_handler(call):
         bot.edit_message_text(source_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
         return bot.answer_callback_query(call.id)
 
-    elif call.data == "generate_text":
-        bot.answer_callback_query(call.id, text="جاري التوليد...", show_alert=False)
-        if settings['language'] == "مختلط":
-            lang_prompt = "اكتب العبارة باللغة العربية أولاً، ثم اترك سطراً فارغاً، ثم اكتب ترجمتها باللغة الإنجليزية تحت العربية."
-        else:
-            lang_prompt = f"باللغة {settings['language']}"
-
-        prompt = f"اكتب عبارة قصيرة جداً بأسلوب {settings['category']} {lang_prompt} تناسب قناة اسمها {bot.get_me().first_name}. بدون إيموجي."
-        
-        try:
-            chat_completion = client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}], 
-                model="qwen/qwen3.8-27b",
-                max_tokens=500
-            )
-            raw_text = chat_completion.choices[0].message.content.strip()
-            msg_id = str(int(time.time()))
-            generated_texts[msg_id] = {"raw": raw_text, "bold": False, "italic": False, "strike": False, "quote": False, "user_id": user_id}
-            send_formatting_panel(call.message.chat.id, msg_id)
-            bot.delete_message(call.message.chat.id, call.message.message_id)
-        except Exception as e:
-            bot.send_message(call.message.chat.id, f"خطأ: {e}")
-
     elif call.data.startswith('fmt_'):
         parts = call.data.split('_')
         action, msg_id = parts[1], parts[2]
@@ -327,8 +429,10 @@ def callback_handler(call):
         data = pending_posts[post_id]
         try:
             target_channel = data['channel']
-            if data['type'] == 'photo': bot.send_photo(target_channel, data['file_id'], caption=data['caption'], parse_mode='HTML')
-            else: bot.send_message(target_channel, data['caption'], parse_mode='HTML')
+            if data['type'] == 'photo': 
+                bot.send_photo(target_channel, data['file_id'], caption=data['caption'], parse_mode='HTML')
+            else: 
+                bot.send_message(target_channel, data['caption'], parse_mode='HTML')
             
             try: bot.delete_message(call.message.chat.id, call.message.message_id)
             except: pass
@@ -351,10 +455,15 @@ def callback_handler(call):
         bot.answer_callback_query(call.id, text="تم إلغاء المنشور", show_alert=False)
         bot.send_message(call.message.chat.id, "<b>مرحباً بك في لوحة التحكم</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(user_id), parse_mode='HTML')
 
-# ================= 6. استقبال الصور =================
+# ================= 9. استقبال الصور =================
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
+    
+    # فحص الاشتراك
+    is_subscribed, _ = check_subscription(user_id)
+    if not is_subscribed and user_id != ADMIN_ID:
+        return send_force_sub_message(message.chat.id)
     
     if user_id != ADMIN_ID and str(user_id) not in user_channels:
         return bot.send_message(message.chat.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً لتتمكن من إرسال الصور.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel")))
@@ -407,6 +516,11 @@ def handle_text(message):
     
     if message.text.startswith('/'): return
     
+    # فحص الاشتراك
+    is_subscribed, _ = check_subscription(user_id)
+    if not is_subscribed and user_id != ADMIN_ID:
+        return send_force_sub_message(message.chat.id)
+    
     if user_id != ADMIN_ID and str(user_id) not in user_channels:
         return bot.send_message(message.chat.id, "⛔ عذراً، يجب عليك التحقق من رفع البوت في قناتك أولاً.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel")))
     
@@ -444,7 +558,7 @@ def handle_text(message):
         except Exception as e:
             bot.send_message(message.chat.id, f"خطأ: {e}")
 
-# ================= 7. لوحات مساعدة =================
+# ================= 10. لوحات مساعدة =================
 def get_lang_panel():
     markup = InlineKeyboardMarkup(row_width=3)
     markup.add(InlineKeyboardButton("عربي", callback_data="lang_عربي"), InlineKeyboardButton("إنجليزي", callback_data="lang_إنجليزي"), InlineKeyboardButton("مختلط", callback_data="lang_مختلط"))
