@@ -71,12 +71,10 @@ def send_welcome(message):
 
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode='HTML')
 
-# ================= 2. التحقق المزدوج (بدون أخطاء) =================
+# ================= 2. التحقق المزدوج =================
 @bot.callback_query_handler(func=lambda call: call.data == "verify_channel")
 def verify_channel(call):
-    # إغلاق التنبيه فوراً لمنع خطأ (query is too old)
     bot.answer_callback_query(call.id, "جاري الفحص...")
-    
     user_id = call.from_user.id
     channel_id = user_channels.get(str(user_id))
     
@@ -99,7 +97,6 @@ def manual_verify(message, user_id):
 
 def perform_verification(chat_id, user_id, channel_id):
     msg_loading = bot.send_message(chat_id, "⏳ جاري فحص القناة والصلاحيات...")
-
     try:
         chat_info = bot.get_chat(channel_id)
         bot_member = bot.get_chat_member(channel_id, bot.get_me().id)
@@ -117,7 +114,6 @@ def perform_verification(chat_id, user_id, channel_id):
             bot.edit_message_text(success_text, chat_id=chat_id, message_id=msg_loading.message_id, reply_markup=markup, parse_mode='HTML')
         else:
             bot.edit_message_text("❌ البوت موجود في القناة، لكنه لا يملك صلاحية 'نشر الرسائل'. يرجى تعديل صلاحيات البوت في القناة والمحاولة مرة أخرى.", chat_id=chat_id, message_id=msg_loading.message_id)
-            
     except Exception as e:
         bot.edit_message_text(f"❌ حدث خطأ: {e}\nتأكد من أن البوت مشرف في القناة ومن صحة المعرف.", chat_id=chat_id, message_id=msg_loading.message_id)
 
@@ -158,6 +154,8 @@ def get_main_panel(user_id):
         InlineKeyboardButton("توليد عبارة مستقلة", callback_data="generate_text"),
         InlineKeyboardButton("السورس", callback_data="show_source")
     )
+    # إضافة زر مغادرة القناة
+    markup.add(InlineKeyboardButton("مغادرة القناة (إلغاء الارتباط)", callback_data="leave_channel"))
     return markup
 
 # ================= 5. القفل الأمني =================
@@ -180,6 +178,32 @@ def callback_handler(call):
         else:
             bot.edit_message_text(main_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(user_id), parse_mode='HTML')
         return bot.answer_callback_query(call.id)
+
+    # نظام مغادرة القناة
+    elif call.data == "leave_channel":
+        if str(user_id) in user_channels:
+            del user_channels[str(user_id)]
+            save_db(user_channels)
+            
+            bot.answer_callback_query(call.id, text="✅ تم إلغاء ارتباط القناة بنجاح.", show_alert=True)
+            
+            # العودة لرسالة الترحيب لإضافة قناة جديدة
+            welcome_text = (
+                f"<b>⟨ مرحباً بك في R W | Bot ⟩</b>\n"
+                f"<b>━━━━━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+                f"تم إلغاء ارتباط القناة السابقة. يمكنك الآن إضافة قناة جديدة.\n\n"
+                f"<b>الخطوات:</b>\n"
+                f"1. أضف البوت إلى قناتك الجديدة (كـ مشرف).\n"
+                f"2. ارجع هنا واضغط على زر (التحقق من الرفع)."
+            )
+            markup = InlineKeyboardMarkup(row_width=1)
+            markup.add(InlineKeyboardButton("إضافة البوت لقناتك", url=f"https://t.me/{bot.get_me().username}?startchannel=true"))
+            markup.add(InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel"))
+            
+            bot.edit_message_text(welcome_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
+        else:
+            bot.answer_callback_query(call.id, "⚠️ لا توجد قناة مرتبطة بحسابك حالياً.", show_alert=True)
+        return
 
     elif call.data == "toggle_status":
         settings["status"] = "OFF" if settings["status"] == "ON" else "ON"
