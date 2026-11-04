@@ -8,7 +8,8 @@ import threading
 import json
 import os
 import requests
-import yt_dlp
+import ydpy
+import io
 
 # ================= الإعدادات =================
 TELEGRAM_TOKEN = '8386513995:AAEB3MxUUzZDXuYAoYiKNaLNvPAh80mt6i8'
@@ -23,11 +24,6 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
 
 DB_FILE = "user_channels.json"
-AUDIO_DIR = "downloaded_audio"
-COOKIES_FILE = "cookies.txt" # اسم ملف الكوكيز الذي رفعته
-
-if not os.path.exists(AUDIO_DIR):
-    os.makedirs(AUDIO_DIR)
 
 def load_db():
     if os.path.exists(DB_FILE):
@@ -297,7 +293,7 @@ def find_song(call):
         bot.delete_message(call.message.chat.id, msg_loading.message_id)
         bot.send_message(call.message.chat.id, f"حدث خطأ أثناء البحث في يوتيوب: {e}")
 
-# ================= 8. تحميل الأغنية وإرسالها =================
+# ================= 8. تحميل الأغنية وإرسالها (بدون كوكيز) =================
 @bot.callback_query_handler(func=lambda call: call.data.startswith("download_audio_"))
 def download_audio(call):
     parts = call.data.split("_")
@@ -305,38 +301,27 @@ def download_audio(call):
     video_id = parts[3] 
     
     bot.answer_callback_query(call.id, "جاري تحميل الأغنية... يرجى الانتظار.", show_alert=True)
-    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحميل ملف الصوت من يوتيوب...")
+    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحميل ملف الصوت من يوتيوب (بدون كوكيز)...")
     
     try:
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': f'{AUDIO_DIR}/%(id)s.%(ext)s',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-            'quiet': True,
-            'no_warnings': True,
-            'cookiefile': COOKIES_FILE,  # استخدام ملف الكوكيز
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['mweb', 'tv', 'web_safari'] 
-                }
-            }
-        }
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=True)
-            mp3_path = os.path.join(AUDIO_DIR, f"{video_id}.mp3")
-            
-            if os.path.exists(mp3_path):
-                with open(mp3_path, 'rb') as audio:
-                    bot.send_audio(call.message.chat.id, audio, title=info.get('title', 'أغنية روسية'))
-                os.remove(mp3_path) 
-            else:
-                bot.send_message(call.message.chat.id, "❌ فشل العثور على الملف الصوتي بعد التحميل.")
-                
+        video_url = f"https://www.youtube.com/watch?v={video_id}"
+        
+        # استخدام ydpy لجلب البيانات
+        data = ydpy.PlayableVideo.fetch(video_url)
+        
+        # اختيار أفضل جودة صوت
+        audio_format = max(
+            (f for f in data.formats if f.is_audio),
+            key=lambda f: f.bitrate or 0
+        )
+        
+        # تحميل الصوت إلى ذاكرة مؤقتة
+        audio_buffer = io.BytesIO()
+        audio_format.download(audio_buffer)
+        audio_buffer.seek(0)
+        
+        bot.send_audio(call.message.chat.id, audio_buffer, title=data.title or "أغنية روسية")
+        
     except Exception as e:
         bot.send_message(call.message.chat.id, f"❌ حدث خطأ أثناء التحميل: {e}")
     finally:
