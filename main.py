@@ -7,10 +7,13 @@ import datetime
 import threading
 import json
 import os
+import requests
+import yt_dlp
 
 # ================= الإعدادات =================
 TELEGRAM_TOKEN = '8386513995:AAEB3MxUUzZDXuYAoYiKNaLNvPAh80mt6i8'
 GROQ_API_KEY = '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'
+YOUTUBE_API_KEY = 'AIzaSyA_mi9TWynhVIcknVpBtZEq0b8G9p7Lskk' 
 ADMIN_ID = 8456056018 
 
 # قنوات الاشتراك الإجباري
@@ -20,6 +23,10 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
 
 DB_FILE = "user_channels.json"
+AUDIO_DIR = "downloaded_audio"
+
+if not os.path.exists(AUDIO_DIR):
+    os.makedirs(AUDIO_DIR)
 
 def load_db():
     if os.path.exists(DB_FILE):
@@ -46,7 +53,7 @@ def get_default_settings():
 user_settings = {} 
 generated_texts = {}
 pending_posts = {}
-saved_images = {} # لتخزين الصور لاستخدامها في اقتراح الأغنية
+saved_images = {} 
 
 # ================= دالة فحص الاشتراك الإجباري =================
 def check_subscription(user_id):
@@ -168,7 +175,7 @@ def perform_verification(chat_id, user_id, channel_id):
     except Exception as e:
         bot.edit_message_text(f"❌ حدث خطأ: {e}\nتأكد من أن البوت مشرف في القناة ومن صحة المعرف.", chat_id=chat_id, message_id=msg_loading.message_id)
 
-# ================= 4. حفظ القناة تلقائياً عند إضافتها =================
+# ================= 4. حفظ القناة تلقائياً =================
 @bot.message_handler(content_types=['new_chat_members'])
 def bot_added_to_channel(message):
     for member in message.new_chat_members:
@@ -243,42 +250,94 @@ def handle_generate_text(call):
     except Exception as e:
         bot.send_message(call.message.chat.id, f"خطأ: {e}")
 
-# ================= 7. اقتراح أغنية للصورة =================
+# ================= 7. نظام البحث عن أغنية روسية =================
 @bot.callback_query_handler(func=lambda call: call.data.startswith("find_song_"))
 def find_song(call):
     post_id = call.data.split("_")[2]
     if post_id not in saved_images: return bot.answer_callback_query(call.id, "انتهت الصلاحية")
     
-    bot.answer_callback_query(call.id, text="جاري البحث عن أغنية تناسب الصورة...", show_alert=False)
-    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحليل الصورة واقتراح أغنية أجنبية...")
+    bot.answer_callback_query(call.id, text="جاري البحث في يوتيوب...", show_alert=False)
+    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري البحث عن أغنية روسية حقيقية (حزينة/ريمكس)...")
     
     try:
-        file_info = bot.get_file(saved_images[post_id])
-        downloaded_file = bot.download_file(file_info.file_path)
-        base64_image = base64.b64encode(downloaded_file).decode('utf-8')
+        # البحث في يوتيوب باستخدام كلمات مفتاحية روسية
+        search_query = "грустная песня ремикс 2024 2025" # أغنية حزينة ريمكس 2024-2025
         
-        prompt = (
-            "Look at this image and suggest ONE song that perfectly matches its mood and atmosphere. "
-            "The song MUST be in English (Foreign song) or an instrumental/cinematic soundtrack. "
-            "Do NOT suggest Arabic songs. "
-            "Write the song name and the artist name only, nothing else."
-        )
+        url = "https://www.googleapis.com/youtube/v3/search"
+        params = {
+            "part": "snippet",
+            "q": search_query,
+            "type": "video",
+            "maxResults": 1,
+            "key": YOUTUBE_API_KEY
+        }
         
-        chat_completion = client.chat.completions.create(
-            messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}]}],
-            model="qwen/qwen3.8-27b",
-            max_tokens=100
-        )
-        song_suggestion = chat_completion.choices[0].message.content.strip()
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
         
-        bot.delete_message(call.message.chat.id, msg_loading.message_id)
-        bot.send_message(call.message.chat.id, f"<b>🎵 الأغنية المقترحة:</b>\n\n{song_suggestion}", parse_mode='HTML')
-        
+        if "items" in data and len(data["items"]) > 0:
+            video = data["items"][0]
+            video_title = video["snippet"]["title"]
+            video_id = video["id"]["videoId"]
+            video_url = f"https://www.youtube.com/watch?v={video_id}"
+            
+            bot.delete_message(call.message.chat.id, msg_loading.message_id)
+            
+            markup = InlineKeyboardMarkup(row_width=2)
+            markup.add(
+                InlineKeyboardButton("مشاهدة في يوتيوب", url=video_url),
+                InlineKeyboardButton("تحميل الأغنية (MP3)", callback_data=f"download_audio_{post_id}_{video_id}")
+            )
+            
+            bot.send_message(call.message.chat.id, f"<b>🎵 الأغنية الروسية المقترحة:</b>\n\n{video_title}", reply_markup=markup, parse_mode='HTML')
+        else:
+            bot.edit_message_text("❌ لم يتم العثور على أغاني روسية مطابقة.", chat_id=call.message.chat.id, message_id=msg_loading.message_id)
+            
     except Exception as e:
         bot.delete_message(call.message.chat.id, msg_loading.message_id)
-        bot.send_message(call.message.chat.id, f"حدث خطأ أثناء البحث: {e}")
+        bot.send_message(call.message.chat.id, f"حدث خطأ أثناء البحث في يوتيوب: {e}")
 
-# ================= 8. القفل الأمني =================
+# ================= 8. تحميل الأغنية وإرسالها =================
+@bot.callback_query_handler(func=lambda call: call.data.startswith("download_audio_"))
+def download_audio(call):
+    parts = call.data.split("_")
+    post_id = parts[2]
+    video_id = parts[3] 
+    
+    bot.answer_callback_query(call.id, "جاري تحميل الأغنية... يرجى الانتظار.", show_alert=True)
+    msg_loading = bot.send_message(call.message.chat.id, "⏳ جاري تحميل ملف الصوت من يوتيوب...")
+    
+    try:
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': f'{AUDIO_DIR}/%(id)s.%(ext)s',
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            'quiet': True,
+            'no_warnings': True,
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=True)
+            mp3_path = os.path.join(AUDIO_DIR, f"{video_id}.mp3")
+            
+            if os.path.exists(mp3_path):
+                with open(mp3_path, 'rb') as audio:
+                    bot.send_audio(call.message.chat.id, audio, title=info.get('title', 'أغنية روسية'))
+                os.remove(mp3_path) 
+            else:
+                bot.send_message(call.message.chat.id, "❌ فشل العثور على الملف الصوتي بعد التحميل.")
+                
+    except Exception as e:
+        bot.send_message(call.message.chat.id, f"❌ حدث خطأ أثناء التحميل: {e}")
+    finally:
+        try: bot.delete_message(call.message.chat.id, msg_loading.message_id)
+        except: pass
+
+# ================= 9. القفل الأمني =================
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     user_id = call.from_user.id
@@ -434,7 +493,7 @@ def callback_handler(call):
         bot.answer_callback_query(call.id, text="تم إلغاء المنشور", show_alert=False)
         bot.send_message(call.message.chat.id, "<b>مرحباً بك في لوحة التحكم</b>\n\nاختر الإجراء الذي تريده:", reply_markup=get_main_panel(user_id), parse_mode='HTML')
 
-# ================= 9. استقبال الصور =================
+# ================= 10. استقبال الصور =================
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
@@ -529,7 +588,7 @@ def handle_text(message):
         except Exception as e:
             bot.send_message(message.chat.id, f"خطأ: {e}")
 
-# ================= 10. لوحات مساعدة =================
+# ================= 11. لوحات مساعدة =================
 def get_lang_panel():
     markup = InlineKeyboardMarkup(row_width=3)
     markup.add(InlineKeyboardButton("عربي", callback_data="lang_عربي"), InlineKeyboardButton("إنجليزي", callback_data="lang_إنجليزي"), InlineKeyboardButton("مختلط", callback_data="lang_مختلط"))
