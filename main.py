@@ -69,14 +69,43 @@ def convert_to_jpg(image_bytes):
         img = Image.open(io.BytesIO(image_bytes))
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-        # تصغير الصورة لضمان قبولها كغلاف في تيليجرام (الحد الأقصى المفضل 320x320)
-        img.thumbnail((320, 320))
+        img.thumbnail((320, 320)) # تصغير الصورة لضمان قبولها كغلاف
         output = io.BytesIO()
         img.save(output, format="JPEG", quality=90)
         return output.getvalue()
     except Exception as e:
         print(f"Error converting image: {e}")
         return image_bytes
+
+# ================= دالة إنشاء ملف صوتي جديد مع الغلاف =================
+def rebuild_audio_with_cover(original_audio_bytes, cover_bytes):
+    try:
+        # إنشاء نسخة جديدة من الملف في الذاكرة
+        audio_buffer = io.BytesIO(original_audio_bytes)
+        audio = MP3(audio_buffer, ID3=ID3)
+        
+        # حذف جميع التاجات القديمة لضمان عدم وجود تعارض
+        try:
+            audio.delete()
+        except ID3Error:
+            pass
+        
+        # إضافة تاجات جديدة
+        audio.add_tags()
+        audio.tags.add(TIT2(encoding=3, text="Red world | عالم الأحمر"))
+        audio.tags.add(TPE1(encoding=3, text="@Eror_7"))
+        
+        # تحويل الصورة وإضافتها
+        cover_data_jpg = convert_to_jpg(cover_bytes)
+        audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=cover_data_jpg))
+        
+        # حفظ الملف
+        audio.save(audio_buffer)
+        audio_buffer.seek(0)
+        return audio_buffer.getvalue() # إرجاع البيانات كـ Bytes
+    except Exception as e:
+        print(f"Error rebuilding audio: {e}")
+        return original_audio_bytes
 
 # ================= دالة فحص الاشتراك الإجباري =================
 def check_subscription(user_id):
@@ -299,39 +328,28 @@ def handle_audio_merge(message):
         try:
             file_info = bot.get_file(file_id)
             audio_data = bot.download_file(file_info.file_path)
-            audio_buffer = io.BytesIO(audio_data)
-            audio = MP3(audio_buffer, ID3=ID3)
-            try: audio.add_tags()
-            except ID3Error: pass
-
-            audio.tags.add(TIT2(encoding=3, text="Red world | عالم الأحمر"))
-            audio.tags.add(TPE1(encoding=3, text="@Eror_7"))
             
-            # تحويل الصورة إلى JPG
             cover_data = audio_edit_state[user_id]['cover_data']
-            cover_data_jpg = convert_to_jpg(cover_data)
+            rebuilt_audio_data = rebuild_audio_with_cover(audio_data, cover_data)
             
-            # إضافة الغلاف
-            audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=cover_data_jpg))
+            # حفظ البيانات الأصلية لإعادة الاستخدام عند النشر
+            audio_edit_state[user_id]['original_audio'] = audio_data
+            audio_edit_state[user_id]['cover_data'] = cover_data
             
-            audio.save(audio_buffer)
-            audio_buffer.seek(0)
+            audio_buffer = io.BytesIO(rebuilt_audio_data)
             
             markup = InlineKeyboardMarkup()
             markup.add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
             markup.add(InlineKeyboardButton("نشر في القناة", callback_data=f"publish_standalone_audio_{user_id}"))
             
-            audio_edit_state[user_id]['audio_buffer'] = audio_buffer
-            
             bot.delete_message(message.chat.id, msg_loading.message_id)
             
-            # إرسال الملف الصوتي مع الغلاف
+            # إرسال المعاينة في الخاص
             bot.send_audio(
                 message.chat.id, 
                 audio_buffer, 
                 title="Red world | عالم الأحمر", 
-                performer="@Eror_7",
-                thumb=cover_data_jpg
+                performer="@Eror_7"
             )
             bot.send_message(message.chat.id, f"تم إضافة الحقوق بنجاح.", reply_markup=markup)
         except Exception as e:
@@ -356,40 +374,27 @@ def handle_audio_merge(message):
             photo_file_info = bot.get_file(data['photo_id'])
             photo_data = bot.download_file(photo_file_info.file_path)
             
-            audio_buffer = io.BytesIO(audio_data)
-            audio = MP3(audio_buffer, ID3=ID3)
-            try: audio.add_tags()
-            except ID3Error: pass
-
-            audio.tags.add(TIT2(encoding=3, text="Red world | عالم الأحمر"))
-            audio.tags.add(TPE1(encoding=3, text="@Eror_7"))
+            rebuilt_audio_data = rebuild_audio_with_cover(audio_data, photo_data)
             
-            # تحويل الصورة إلى JPG
-            photo_data_jpg = convert_to_jpg(photo_data)
+            pending_audio_merge[user_id]['original_audio'] = audio_data
+            pending_audio_merge[user_id]['cover_data'] = photo_data
             
-            # إضافة الغلاف
-            audio.tags.add(APIC(encoding=3, mime='image/jpeg', type=3, desc='Cover', data=photo_data_jpg))
+            audio_buffer = io.BytesIO(rebuilt_audio_data)
             
-            audio.save(audio_buffer)
-            audio_buffer.seek(0)
-
             markup = InlineKeyboardMarkup(row_width=2).add(
                 InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK),
                 InlineKeyboardButton("نشر في القناة", callback_data=f"publish_audio_{user_id}"),
                 InlineKeyboardButton("إلغاء", callback_data=f"cancel_audio_{user_id}")
             )
             
-            pending_audio_merge[user_id]['audio_buffer'] = audio_buffer
-            
             bot.delete_message(message.chat.id, msg_loading.message_id)
             
-            # إرسال الملف الصوتي مع الغلاف
+            # إرسال المعاينة
             bot.send_audio(
                 message.chat.id, 
                 audio_buffer, 
                 title="Red world | عالم الأحمر", 
-                performer="@Eror_7",
-                thumb=photo_data_jpg
+                performer="@Eror_7"
             )
             bot.send_message(message.chat.id, "تم دمج الصورة مع الصوت. اختر الإجراء:", reply_markup=markup)
             
@@ -402,7 +407,7 @@ def handle_audio_merge(message):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("publish_standalone_audio_"))
 def publish_standalone_audio(call):
     user_id = int(call.data.split("_")[3])
-    if user_id not in audio_edit_state or 'audio_buffer' not in audio_edit_state[user_id]:
+    if user_id not in audio_edit_state or 'original_audio' not in audio_edit_state[user_id]:
         return bot.answer_callback_query(call.id, "انتهت الصلاحية.", show_alert=True)
     
     data = audio_edit_state[user_id]
@@ -411,13 +416,13 @@ def publish_standalone_audio(call):
     if not target_channel:
         return bot.answer_callback_query(call.id, "⚠️ القناة غير مرتبطة. يرجى التحقق من الرفع.", show_alert=True)
     
-    audio_buffer = data['audio_buffer']
-    audio_buffer.seek(0)
-    
     try:
+        # إعادة بناء الملف من جديد لضمان قبول الغلاف في القناة
+        rebuilt_audio_data = rebuild_audio_with_cover(data['original_audio'], data['cover_data'])
+        audio_buffer = io.BytesIO(rebuilt_audio_data)
+        
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
         
-        # إرسال الملف الصوتي مع الزر
         bot.send_audio(
             target_channel, 
             audio_buffer, 
@@ -440,16 +445,18 @@ def publish_standalone_audio(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("publish_audio_"))
 def publish_audio(call):
     user_id = int(call.data.split("_")[2])
-    if user_id not in pending_audio_merge: return bot.answer_callback_query(call.id, "انتهت الصلاحية.")
+    if user_id not in pending_audio_merge or 'original_audio' not in pending_audio_merge[user_id]: 
+        return bot.answer_callback_query(call.id, "انتهت الصلاحية.")
     
     data = pending_audio_merge[user_id]
-    audio_buffer = data['audio_buffer']
-    audio_buffer.seek(0)
     
     try:
+        # إعادة بناء الملف من جديد لضمان قبول الغلاف في القناة
+        rebuilt_audio_data = rebuild_audio_with_cover(data['original_audio'], data['cover_data'])
+        audio_buffer = io.BytesIO(rebuilt_audio_data)
+        
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
         
-        # إرسال الملف الصوتي مع الزر
         bot.send_audio(
             data['channel'], 
             audio_buffer, 
