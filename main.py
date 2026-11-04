@@ -69,10 +69,10 @@ def convert_to_jpg(image_bytes):
         img = Image.open(io.BytesIO(image_bytes))
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-        # تصغير الصورة إذا كانت كبيرة جداً (تيليجرام يفضل صور صغيرة للغلاف)
-        img.thumbnail((500, 500))
+        # تصغير الصورة لضمان قبولها كغلاف في تيليجرام (الحد الأقصى المفضل 320x320)
+        img.thumbnail((320, 320))
         output = io.BytesIO()
-        img.save(output, format="JPEG", quality=85)
+        img.save(output, format="JPEG", quality=90)
         return output.getvalue()
     except Exception as e:
         print(f"Error converting image: {e}")
@@ -245,7 +245,7 @@ def get_main_panel(user_id):
     markup.add(InlineKeyboardButton("مغادرة القناة (إلغاء الارتباط)", callback_data="leave_channel"))
     return markup
 
-# ================= 6. نظام حقوق النشر الصوتي (المنفصل) =================
+# ================= 6. نظام حقوق النشر الصوتي =================
 @bot.callback_query_handler(func=lambda call: call.data == "start_audio_edit")
 def start_audio_edit(call):
     user_id = call.from_user.id
@@ -324,12 +324,14 @@ def handle_audio_merge(message):
             audio_edit_state[user_id]['audio_buffer'] = audio_buffer
             
             bot.delete_message(message.chat.id, msg_loading.message_id)
-            # إرسال الملف الصوتي
+            
+            # إرسال الملف الصوتي مع الغلاف
             bot.send_audio(
                 message.chat.id, 
                 audio_buffer, 
                 title="Red world | عالم الأحمر", 
-                performer="@Eror_7"
+                performer="@Eror_7",
+                thumb=cover_data_jpg
             )
             bot.send_message(message.chat.id, f"تم إضافة الحقوق بنجاح.", reply_markup=markup)
         except Exception as e:
@@ -380,11 +382,14 @@ def handle_audio_merge(message):
             pending_audio_merge[user_id]['audio_buffer'] = audio_buffer
             
             bot.delete_message(message.chat.id, msg_loading.message_id)
+            
+            # إرسال الملف الصوتي مع الغلاف
             bot.send_audio(
                 message.chat.id, 
                 audio_buffer, 
                 title="Red world | عالم الأحمر", 
-                performer="@Eror_7"
+                performer="@Eror_7",
+                thumb=photo_data_jpg
             )
             bot.send_message(message.chat.id, "تم دمج الصورة مع الصوت. اختر الإجراء:", reply_markup=markup)
             
@@ -412,6 +417,7 @@ def publish_standalone_audio(call):
     try:
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
         
+        # إرسال الملف الصوتي مع الزر
         bot.send_audio(
             target_channel, 
             audio_buffer, 
@@ -443,6 +449,7 @@ def publish_audio(call):
     try:
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton(f"{CHANNEL_NAME}", url=CHANNEL_LINK))
         
+        # إرسال الملف الصوتي مع الزر
         bot.send_audio(
             data['channel'], 
             audio_buffer, 
