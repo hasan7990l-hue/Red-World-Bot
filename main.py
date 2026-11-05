@@ -587,13 +587,25 @@ def publish_standalone_audio(call):
         return bot.answer_callback_query(call.id, "انتهت الصلاحية.")
     try:
         cached = audio_cache[uid]
+        
+        # 1. إرسال الملف الصوتي فقط
         bot.send_audio(target_channel, io.BytesIO(cached['data']),
                        title="Red World", performer="@Eror_7",
                        thumb=cached['cover'] if cached['cover'] else None)
+        
+        # 2. إرسال الأزرار في رسالة نصية منفصلة تحته
+        markup = InlineKeyboardMarkup(row_width=1).add(
+            InlineKeyboardButton("Red World Channel", url=CHANNEL_LINK),
+            InlineKeyboardButton(CHANNEL_NAME, url=CHANNEL_LINK)
+        )
+        bot.send_message(target_channel, "<b>حقوق النشر محفوظة | Red World</b>", reply_markup=markup, parse_mode='HTML')
+
         stats["published_count"] += 1; save_json(STATS_FILE, stats)
         bot.answer_callback_query(call.id, "تم النشر بنجاح.")
+        
         if uid in audio_edit_state: del audio_edit_state[uid]
         if uid in audio_cache: del audio_cache[uid]
+        
         bot.send_message(call.message.chat.id, MSGS["control_panel"],
                          reply_markup=get_main_panel(uid), parse_mode='HTML')
     except Exception as e:
