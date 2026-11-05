@@ -327,8 +327,8 @@ def media_format_and_publish(call):
     if media_type == 'photo':
         bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
     else:
-        bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
-        @bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
+        bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML') 
+@bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
 def start_gaski_chat(call):
     chat_state[call.from_user.id] = True
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إنهاء الدردشة", callback_data="main_menu"))
