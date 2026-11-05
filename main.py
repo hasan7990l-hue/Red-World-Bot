@@ -157,19 +157,7 @@ def perform_verification(chat_id, user_id, channel_id):
     except Exception as e:
         bot.edit_message_text(f"<b>خطأ:</b> {e}", chat_id=chat_id, message_id=msg.message_id, parse_mode='HTML')
 
-def get_main_panel(user_id):
-    settings = user_settings.get(user_id, get_default_settings())
-    welcome_btn = "تغيير صورة الترحيب (مفعلة)" if settings.get("welcome_photo") else "تعيين صورة الترحيب"
-    markup = InlineKeyboardMarkup(row_width=1)
-    markup.add(
-        InlineKeyboardButton("إنشاء محتوى (صورة/فيديو)", callback_data="menu_create"),
-        InlineKeyboardButton("التوليد النصي والإعلانات", callback_data="menu_tools"),
-        InlineKeyboardButton(welcome_btn, callback_data="set_welcome_photo"),
-        InlineKeyboardButton("دردشة Gaski", callback_data="start_chat_gaski"),
-        InlineKeyboardButton("السورس", callback_data="show_source"),
-        InlineKeyboardButton("مغادرة القناة", callback_data="leave_channel")
-    )
-    return markup
+def get_main_panel(user_id): settings = user_settings.get(user_id, get_default_settings()); welcome_btn = "تغيير صورة الترحيب (مفعلة)" if settings.get("welcome_photo") else "تعيين صورة الترحيب"; markup = InlineKeyboardMarkup(row_width=1); markup.add(InlineKeyboardButton("إنشاء محتوى (صورة/فيديو)", callback_data="menu_create"), InlineKeyboardButton("التوليد النصي والإعلانات", callback_data="menu_tools"), InlineKeyboardButton(welcome_btn, callback_data="set_welcome_photo"), InlineKeyboardButton("دردشة Gaski", callback_data="start_chat_gaski"), InlineKeyboardButton("السورس", callback_data="show_source"), InlineKeyboardButton("مغادرة القناة", callback_data="leave_channel")); return markup
 
 @bot.callback_query_handler(func=lambda call: call.data == "main_menu")
 def main_menu(call):
@@ -220,7 +208,6 @@ def handle_all_photos(message):
             bot.send_message(message.chat.id, "<b>⟨ تم حفظ الغلاف ⟩</b>\n\n<blockquote>الآن أرسل ملف الصوت MP3.</blockquote>", parse_mode='HTML')
         except Exception as e: bot.send_message(message.chat.id, f"خطأ: {e}")
         return
-
     if uid in welcome_media_state:
         settings = user_settings.get(uid, get_default_settings())
         settings["welcome_photo"] = message.photo[-1].file_id
@@ -228,7 +215,6 @@ def handle_all_photos(message):
         del welcome_media_state[uid]
         bot.send_message(message.chat.id, "تم تعيين صورة الترحيب.", reply_markup=get_main_panel(uid))
         return
-
     if uid in image_gen_state and image_gen_state[uid].get('step') == 'waiting_for_photo':
         image_gen_state[uid]['file_id'] = message.photo[-1].file_id
         image_gen_state[uid]['step'] = 'waiting_category'
@@ -257,10 +243,8 @@ def media_category(call):
     uid = call.from_user.id
     is_img = call.data.startswith("img_cat_")
     cat = call.data.replace("img_cat_", "").replace("vid_cat_", "")
-    
     if is_img and uid in image_gen_state: image_gen_state[uid]['category'] = cat
     elif not is_img and uid in video_gen_state: video_gen_state[uid]['category'] = cat
-
     prefix = "img" if is_img else "vid"
     markup = InlineKeyboardMarkup(row_width=2).add(
         InlineKeyboardButton("عربي فقط", callback_data=f"{prefix}_lang_عربي"),
@@ -274,10 +258,8 @@ def media_language(call):
     uid = call.from_user.id
     is_img = call.data.startswith("img_lang_")
     lang_choice = call.data.replace("img_lang_", "").replace("vid_lang_", "")
-    
     if is_img and uid in image_gen_state: image_gen_state[uid]['language'] = lang_choice
     elif not is_img and uid in video_gen_state: video_gen_state[uid]['language'] = lang_choice
-
     prefix = "img" if is_img else "vid"
     markup = InlineKeyboardMarkup(row_width=2).add(
         InlineKeyboardButton("خط مائل", callback_data=f"{prefix}_fmt_italic"),
@@ -291,43 +273,25 @@ def media_format_and_publish(call):
     uid = call.from_user.id
     is_img = call.data.startswith("img_fmt_")
     fmt = call.data.split("_")[-1]
-    
-    if is_img and uid in image_gen_state:
-        state = image_gen_state[uid]; file_id = state['file_id']; category = state.get('category', 'فلسفي'); lang = state.get('language', 'عربي'); media_type = 'photo'
-    elif not is_img and uid in video_gen_state:
-        state = video_gen_state[uid]; file_id = state['file_id']; category = state.get('category', 'فلسفي'); lang = state.get('language', 'عربي'); media_type = 'video'
+    if is_img and uid in image_gen_state: state = image_gen_state[uid]; file_id = state['file_id']; category = state.get('category', 'فلسفي'); lang = state.get('language', 'عربي'); media_type = 'photo'
+    elif not is_img and uid in video_gen_state: state = video_gen_state[uid]; file_id = state['file_id']; category = state.get('category', 'فلسفي'); lang = state.get('language', 'عربي'); media_type = 'video'
     else: return bot.answer_callback_query(call.id, "انتهت الجلسة.", show_alert=True)
-
     bot.edit_message_text("⏳ جاري توليد العبارة...", chat_id=call.message.chat.id, message_id=call.message.message_id)
-    
     lang_instr = "جملة عربية قصيرة ثم ترجمتها الإنجليزية في السطر التالي" if lang == "مختلط" else "باللغة العربية الفصحى"
     prompt = f"اكتب عبارة قصيرة جداً من سطر واحد بأسلوب {category} ({lang_instr}). بدون إيموجي، بدون نجوم، بدون علامات اقتباس."
-    
     try:
         res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=GROQ_MODEL, max_tokens=150)
         raw_text = res.choices[0].message.content.strip()
     except: raw_text = "عبارة تجريبية."
-    
     final_text = f"<i>{raw_text}</i>" if fmt == "italic" else f"<b>{raw_text}</b>"
     settings = user_settings.get(uid, get_default_settings())
     final_caption = f"{final_text}\n\n{settings.get('hashtags', '')}"
-    
     post_id = str(int(time.time()))
-    pending_posts[post_id] = {
-        'type': media_type, 'file_id': file_id, 'caption': final_caption, 'channel': user_channels.get(str(uid)),
-        'category': category, 'language': lang, 'format': fmt, 'is_img': is_img
-    }
-    
-    markup = InlineKeyboardMarkup(row_width=1).add(
-        InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_{post_id}"),
-        InlineKeyboardButton("نشر الآن في القناة", callback_data=f"confirm_{post_id}"),
-        InlineKeyboardButton("إلغاء", callback_data="main_menu")
-    )
-    
-    if media_type == 'photo':
-        bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
-    else:
-        bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML') 
+    pending_posts[post_id] = {'type': media_type, 'file_id': file_id, 'caption': final_caption, 'channel': user_channels.get(str(uid)), 'category': category, 'language': lang, 'format': fmt, 'is_img': is_img}
+    markup = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_{post_id}"), InlineKeyboardButton("نشر الآن في القناة", callback_data=f"confirm_{post_id}"), InlineKeyboardButton("إلغاء", callback_data="main_menu"))
+    if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+    else: bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+
 @bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
 def start_gaski_chat(call):
     chat_state[call.from_user.id] = True
@@ -342,8 +306,7 @@ def handle_chat_message(message):
         res = client.chat.completions.create(messages=[{"role": "user", "content": message.text}], model=GROQ_MODEL, max_tokens=500)
         bot.edit_message_text(res.choices[0].message.content, chat_id=message.chat.id, message_id=msg.message_id)
     except Exception as e: bot.edit_message_text(f"خطأ: {e}", chat_id=message.chat.id, message_id=msg.message_id)
-
-@bot.callback_query_handler(func=lambda call: call.data == "set_welcome_photo")
+        @bot.callback_query_handler(func=lambda call: call.data == "set_welcome_photo")
 def set_welcome_photo(call):
     welcome_media_state[call.from_user.id] = True
     bot.edit_message_text("<b>أرسل الصورة:</b>", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء", callback_data="main_menu")), parse_mode='HTML')
@@ -363,10 +326,8 @@ def handle_audio(message):
             audio_data = bot.download_file(bot.get_file(file_id).file_path)
             cover_data = audio_edit_state[uid].get('cover_data')
             if not cover_data: return bot.reply_to(message, "لم يتم العثور على الغلاف.")
-            
             rebuilt, cover_jpg = rebuild_audio_with_cover(audio_data, cover_data)
             audio_cache[uid] = {'data': rebuilt, 'cover': cover_jpg}
-            
             markup = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("نشر في القناة", callback_data=f"publish_standalone_audio_{uid}"))
             bot.send_audio(message.chat.id, io.BytesIO(rebuilt), title="Red World", performer="@Eror_7", thumb=cover_jpg if cover_jpg else None)
             bot.send_message(message.chat.id, "<b>⟨ جاهز للنشر ⟩</b>", reply_markup=markup, parse_mode='HTML')
@@ -381,10 +342,8 @@ def publish_standalone_audio(call):
     try:
         cached = audio_cache[uid]
         bot.send_audio(target_channel, io.BytesIO(cached['data']), title="Red World", performer="@Eror_7", thumb=cached['cover'] if cached['cover'] else None)
-        
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton("Red World | عالم الأحمر", url=CHANNEL_LINK))
         bot.send_message(target_channel, "<b>حقوق النشر محفوظة | Red World</b>", reply_markup=markup, parse_mode='HTML')
-        
         bot.answer_callback_query(call.id, "تم النشر.")
         if uid in audio_cache: del audio_cache[uid]
         main_menu(call)
@@ -396,27 +355,19 @@ def regenerate_caption(call):
     if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية.", show_alert=True)
     data = pending_posts[post_id]
     bot.answer_callback_query(call.id, "جاري توليد عبارة جديدة...")
-    
     category = data.get('category', 'فلسفي'); lang = data.get('language', 'عربي'); fmt = data.get('format', 'bold'); file_id = data['file_id']; media_type = data['type']
     lang_instr = "جملة عربية قصيرة ثم ترجمتها الإنجليزية في السطر التالي" if lang == "مختلط" else "باللغة العربية الفصحى"
     prompt = f"اكتب عبارة قصيرة جداً من سطر واحد بأسلوب {category} ({lang_instr}). بدون إيموجي، استخدم أسلوباً مختلفاً."
-    
     try:
         res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=GROQ_MODEL, max_tokens=150)
         raw_text = res.choices[0].message.content.strip()
     except: raw_text = "عبارة تجريبية."
-    
     final_text = f"<i>{raw_text}</i>" if fmt == "italic" else f"<b>{raw_text}</b>"
     settings = user_settings.get(call.from_user.id, get_default_settings())
     final_caption = f"{final_text}\n\n{settings.get('hashtags', '')}"
     data['caption'] = final_caption
     pending_posts[post_id] = data
-    
-    markup = InlineKeyboardMarkup(row_width=1).add(
-        InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_{post_id}"),
-        InlineKeyboardButton("نشر الآن في القناة", callback_data=f"confirm_{post_id}"),
-        InlineKeyboardButton("إلغاء", callback_data="main_menu")
-    )
+    markup = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_{post_id}"), InlineKeyboardButton("نشر الآن في القناة", callback_data=f"confirm_{post_id}"), InlineKeyboardButton("إلغاء", callback_data="main_menu"))
     try: bot.delete_message(call.message.chat.id, call.message.message_id)
     except: pass
     if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة جديدة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
@@ -460,9 +411,6 @@ def leave_channel(call):
     bot.answer_callback_query(call.id, "تم فك الارتباط.")
     main_menu(call)
 
-# ==========================================
-#               نظام الإعلانات
-# ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "start_ad_builder")
 def start_ad_builder(call):
     ad_builder_state[call.from_user.id] = {'step': 'waiting_group_name'}
@@ -473,15 +421,10 @@ def ad_step_handler(message):
     uid = message.from_user.id
     data = ad_builder_state[uid]
     step = data.get('step')
-    
     if step == 'waiting_group_name':
         data['group_name'] = message.text.strip()
         data['step'] = 'waiting_group_type'
-        markup = InlineKeyboardMarkup(row_width=3).add(
-            InlineKeyboardButton("تمبلر", callback_data="ad_type_تمبلر"), 
-            InlineKeyboardButton("فري", callback_data="ad_type_فري"), 
-            InlineKeyboardButton("مزج", callback_data="ad_type_مزج")
-        )
+        markup = InlineKeyboardMarkup(row_width=3).add(InlineKeyboardButton("تمبلر", callback_data="ad_type_تمبلر"), InlineKeyboardButton("فري", callback_data="ad_type_فري"), InlineKeyboardButton("مزج", callback_data="ad_type_مزج"))
         bot.send_message(message.chat.id, "<b>⟨ 2/7 ⟩ اختر نوع المجموعة:</b>", reply_markup=markup, parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("ad_type_"))
