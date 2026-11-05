@@ -16,7 +16,6 @@ ADMIN_ID = 8456056018
 FORCE_CHANNELS = ["@Eror_7", "@lb2_c"]
 CHANNEL_NAME = "عالم الأحمر | Red world"
 CHANNEL_LINK = "https://t.me/Eror_7"
-# استخدام موديل بديل لتجنب حد Qwen
 GROQ_MODEL = "openai/gpt-oss-120b" 
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
@@ -29,6 +28,60 @@ image_gen_state, video_gen_state, chat_state, welcome_media_state = {}, {}, {}, 
 audio_cache = {}
 user_channels, stats, user_settings = {}, {}, {}
 generated_texts, pending_posts, saved_images = {}, {}, {}
+
+# ==========================================
+#       الكليشات المخصصة لكل زر (القاموس)
+# ==========================================
+MENU_TEXTS = {
+    "main_menu": (
+        "<b>⟨ غرفة التحكم ⟩</b>\n"
+        "────────────────────\n\n"
+        "<blockquote>مرحباً بك في مركز إدارة عالم الأحمر.\n"
+        "اختر القسم الذي ترغب في إدارته من الأسفل.</blockquote>"
+    ),
+    "menu_create": (
+        "<b>⟨ استوديو المحتوى ⟩</b>\n"
+        "────────────────────\n\n"
+        "<blockquote>من هنا يمكنك إنشاء منشوراتك.\n"
+        "اختر إرسال صورة أو فيديو، وسيقوم الذكاء الاصطناعي بتوليد عبارة مناسبة لك بناءً على الفئة التي تختارها.</blockquote>"
+    ),
+    "menu_tools": (
+        "<b>⟨ أدوات التوليد والنشر ⟩</b>\n"
+        "────────────────────\n\n"
+        "<blockquote>هنا تجد أدوات التوليد النصي بالذكاء الاصطناعي، وبناء الإعلانات الترويجية، وختم الحقوق الصوتية للملفات.</blockquote>"
+    ),
+    "start_chat_gaski": (
+        "<b>⟨ دردشة Gaski ⟩</b>\n"
+        "────────────────────\n\n"
+        "<blockquote>أهلاً بك في العقل المدبر.\n"
+        "تحدث معي بحرية، اسألني أي شيء، وسأجيبك بأفضل ما لدي.</blockquote>"
+    ),
+    "start_ad_builder": (
+        "<b>⟨ بروتوكول الإعلان ⟩</b>\n"
+        "────────────────────\n\n"
+        "<blockquote>سنقوم ببناء إعلان احترافي لمجموعتك.\n"
+        "أجب على الأسئلة خطوة بخطوة، وسيتولى الذكاء الاصطناعي صياغة الإعلان.</blockquote>"
+    ),
+    "start_audio_edit": (
+        "<b>⟨ ختم الحقوق الصوتي ⟩</b>\n"
+        "────────────────────\n\n"
+        "<blockquote>أضف غلافك وحقوقك إلى ملفاتك الصوتية.\n"
+        "أرسل صورة الغلاف أولاً، ثم أرسل ملف الصوت MP3.</blockquote>"
+    ),
+    "welcome": (
+        "<b>⟨ بوابة عالم الأحمر ⟩</b>\n"
+        "────────────────────\n\n"
+        "<blockquote>"
+        "مرحباً بك في <b>R W | Bot</b>\n"
+        "النظام المتكامل لإدارة قنوات تيليجرام باحترافية.\n\n"
+        "توليد منشورات بالذكاء الاصطناعي\n"
+        "إنشاء إعلانات ترويجية\n"
+        "ختم الحقوق الصوتية\n"
+        "والمزيد من الأدوات في لوحة التحكم."
+        "</blockquote>\n\n"
+        "<i>اضغط على زر لوحة التحكم للبدء.</i>"
+    )
+}
 
 def load_json(file):
     if os.path.exists(file):
@@ -109,9 +162,9 @@ def send_welcome(message):
         
     settings = user_settings[user_id]
     if settings.get("welcome_photo"):
-        bot.send_photo(message.chat.id, settings["welcome_photo"], caption="<b>مرحباً بك في R W | Bot</b>", reply_markup=markup, parse_mode='HTML')
+        bot.send_photo(message.chat.id, settings["welcome_photo"], caption=MENU_TEXTS["welcome"], reply_markup=markup, parse_mode='HTML')
     else:
-        bot.send_message(message.chat.id, "<b>مرحباً بك في R W | Bot</b>", reply_markup=markup, parse_mode='HTML')
+        bot.send_message(message.chat.id, MENU_TEXTS["welcome"], reply_markup=markup, parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def check_sub(call):
@@ -171,11 +224,11 @@ def get_main_panel(user_id):
 def main_menu(call):
     bot.answer_callback_query(call.id)
     try:
-        bot.edit_message_text("<b>غرفة التحكم</b>", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(call.from_user.id), parse_mode='HTML')
+        bot.edit_message_text(MENU_TEXTS["main_menu"], chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=get_main_panel(call.from_user.id), parse_mode='HTML')
     except:
         try: bot.delete_message(call.message.chat.id, call.message.message_id)
         except: pass
-        bot.send_message(call.message.chat.id, "<b>غرفة التحكم</b>", reply_markup=get_main_panel(call.from_user.id), parse_mode='HTML')
+        bot.send_message(call.message.chat.id, MENU_TEXTS["main_menu"], reply_markup=get_main_panel(call.from_user.id), parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data == "menu_create")
 def menu_create(call):
@@ -184,7 +237,17 @@ def menu_create(call):
         InlineKeyboardButton("إرسال فيديو", callback_data="send_video_mode"),
         InlineKeyboardButton("رجوع", callback_data="main_menu")
     )
-    bot.edit_message_text("<b>إنشاء محتوى</b>", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
+    bot.edit_message_text(MENU_TEXTS["menu_create"], chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
+
+@bot.callback_query_handler(func=lambda call: call.data == "menu_tools")
+def menu_tools(call):
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        InlineKeyboardButton("إنشاء إعلان ترويجي", callback_data="start_ad_builder"),
+        InlineKeyboardButton("حقوق النشر الصوتي", callback_data="start_audio_edit"),
+        InlineKeyboardButton("رجوع", callback_data="main_menu")
+    )
+    bot.edit_message_text(MENU_TEXTS["menu_tools"], chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
 
 # ==========================================
 #               نظام الصور والفيديو
@@ -288,7 +351,7 @@ def media_format_and_publish(call):
 def start_gaski_chat(call):
     chat_state[call.from_user.id] = True
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إنهاء الدردشة", callback_data="main_menu"))
-    bot.edit_message_text("<b>دردشة Gaski</b>\nأرسل رسالتك:", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
+    bot.edit_message_text(MENU_TEXTS["start_chat_gaski"], chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
 
 @bot.message_handler(func=lambda m: m.from_user.id in chat_state, content_types=['text'])
 def handle_chat_message(message):
@@ -309,7 +372,7 @@ def set_welcome_photo(call):
 @bot.callback_query_handler(func=lambda call: call.data == "start_audio_edit")
 def start_audio_edit(call):
     audio_edit_state[call.from_user.id] = {'step': 'waiting_for_cover', 'cover_data': None}
-    bot.edit_message_text("<b>أرسل صورة الغلاف:</b>", chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML')
+    bot.edit_message_text(MENU_TEXTS["start_audio_edit"], chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML')
 
 @bot.message_handler(content_types=['audio', 'document'])
 def handle_audio(message):
