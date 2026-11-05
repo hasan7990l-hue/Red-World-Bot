@@ -14,7 +14,7 @@ ADMIN_ID = 8456056018
 FORCE_CHANNELS = ["@Eror_7", "@lb2_c"]
 CHANNEL_NAME = "عالم الأحمر | Red world"
 CHANNEL_LINK = "https://t.me/Eror_7"
-GROQ_MODEL = "qwen/qwen3.6-27b"
+GROQ_MODEL = "qwen/qwen3.8-27b"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
