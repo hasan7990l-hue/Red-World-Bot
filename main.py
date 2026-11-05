@@ -385,9 +385,22 @@ def media_format_and_publish(call):
     final_caption = f"{final_text}\n\n{settings.get('hashtags', '')}"
     
     post_id = str(int(time.time()))
-    pending_posts[post_id] = {'type': media_type, 'file_id': file_id, 'caption': final_caption, 'channel': user_channels.get(str(uid))}
+    pending_posts[post_id] = {
+        'type': media_type, 
+        'file_id': file_id, 
+        'caption': final_caption, 
+        'channel': user_channels.get(str(uid)),
+        'category': category,
+        'language': lang,
+        'format': fmt,
+        'is_img': is_img
+    }
     
-    markup = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("نشر الآن في القناة", callback_data=f"confirm_{post_id}"), InlineKeyboardButton("إلغاء", callback_data="main_menu"))
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_{post_id}"),
+        InlineKeyboardButton("نشر الآن في القناة", callback_data=f"confirm_{post_id}"),
+        InlineKeyboardButton("إلغاء", callback_data="main_menu")
+    )
     
     if media_type == 'photo':
         bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
@@ -454,6 +467,57 @@ def publish_standalone_audio(call):
         if uid in audio_cache: del audio_cache[uid]
         main_menu(call)
     except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
+
+# ==========================================
+#               تغيير العبارة (جديد)
+# ==========================================
+@bot.callback_query_handler(func=lambda call: call.data.startswith("regen_"))
+def regenerate_caption(call):
+    post_id = call.data.split("_")[1]
+    if post_id not in pending_posts:
+        return bot.answer_callback_query(call.id, "انتهت الصلاحية.", show_alert=True)
+    
+    data = pending_posts[post_id]
+    bot.answer_callback_query(call.id, "جاري توليد عبارة جديدة...")
+    
+    category = data.get('category', 'فلسفي')
+    lang = data.get('language', 'عربي')
+    fmt = data.get('format', 'bold')
+    file_id = data['file_id']
+    media_type = data['type']
+    
+    if lang == "مختلط":
+        lang_instr = "جملة عربية قصيرة ثم ترجمتها الإنجليزية في السطر التالي"
+    else:
+        lang_instr = "باللغة العربية الفصحى"
+
+    prompt = f"اكتب عبارة قصيرة جداً من سطر واحد بأسلوب {category} ({lang_instr}). بدون إيموجي، بدون نجوم، بدون علامات اقتباس. استخدم أسلوباً مختلفاً عن المرة السابقة."
+    
+    try:
+        res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=GROQ_MODEL, max_tokens=150)
+        raw_text = res.choices[0].message.content.strip()
+    except: raw_text = "عبارة تجريبية."
+    
+    final_text = f"<i>{raw_text}</i>" if fmt == "italic" else f"<b>{raw_text}</b>"
+    settings = user_settings.get(call.from_user.id, get_default_settings())
+    final_caption = f"{final_text}\n\n{settings.get('hashtags', '')}"
+    
+    data['caption'] = final_caption
+    pending_posts[post_id] = data
+    
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_{post_id}"),
+        InlineKeyboardButton("نشر الآن في القناة", callback_data=f"confirm_{post_id}"),
+        InlineKeyboardButton("إلغاء", callback_data="main_menu")
+    )
+    
+    try: bot.delete_message(call.message.chat.id, call.message.message_id)
+    except: pass
+    
+    if media_type == 'photo':
+        bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة جديدة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+    else:
+        bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة جديدة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
 
 # ==========================================
 #               النشر والتأكيد
