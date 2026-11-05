@@ -734,22 +734,37 @@ def build_ad_preview(chat_id, uid):
     data = ad_builder_state[uid]
     lang = data['language']
 
-    owner_real_name = data['owner_username']
+    # 1. جلب الاسم الحقيقي للمالك
+    owner_raw = data['owner_username'].strip()
+    owner_clean = owner_raw.lstrip('@') # إزالة @ إن وجدت
+    owner_real_name = owner_raw # كخطة بديلة
+    
     try:
-        owner_clean = data['owner_username'].lstrip('@')
+        # إذا كان المستخدم أرسل رابط (t.me/username) نستخرج اليوزر منه
+        if "t.me/" in owner_clean:
+            owner_clean = owner_clean.split("t.me/")[-1].split("/")[0]
+            
         owner_chat = bot.get_chat(f"@{owner_clean}")
         if owner_chat.first_name:
             owner_real_name = owner_chat.first_name
-    except: pass
+        elif owner_chat.title: # إذا كان قناة وليس حساب شخصي
+            owner_real_name = owner_chat.title
+    except Exception as e:
+        print(f"خطأ في جلب اسم المالك: {e}")
 
-    channel_real_name = data.get('channel_username')
-    if data.get('channel_username'):
+    # 2. جلب الاسم الحقيقي للقناة
+    channel_raw = data.get('channel_username')
+    channel_real_name = channel_raw
+    if channel_raw:
+        ch_clean = channel_raw.strip().lstrip('@')
         try:
-            ch_clean = data['channel_username'].lstrip('@')
+            if "t.me/" in ch_clean:
+                ch_clean = ch_clean.split("t.me/")[-1].split("/")[0]
             ch_chat = bot.get_chat(f"@{ch_clean}")
             if ch_chat.title:
                 channel_real_name = ch_chat.title
-        except: pass
+        except Exception as e:
+            print(f"خطأ في جلب اسم القناة: {e}")
 
     if lang == "عربي":
         prompt = (
