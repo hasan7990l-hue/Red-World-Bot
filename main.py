@@ -729,30 +729,27 @@ def ad_set_lang(call):
     try: bot.delete_message(call.message.chat.id, call.message.message_id)
     except: pass
     build_ad_preview(call.message.chat.id, uid)
-
 def build_ad_preview(chat_id, uid):
     data = ad_builder_state[uid]
     lang = data['language']
 
-    # 1. جلب الاسم الحقيقي للمالك
+    # --- جلب اسم المالك الحقيقي ---
     owner_raw = data['owner_username'].strip()
-    owner_clean = owner_raw.lstrip('@') # إزالة @ إن وجدت
-    owner_real_name = owner_raw # كخطة بديلة
+    owner_clean = owner_raw.lstrip('@')
+    owner_real_name = owner_raw 
     
     try:
-        # إذا كان المستخدم أرسل رابط (t.me/username) نستخرج اليوزر منه
         if "t.me/" in owner_clean:
             owner_clean = owner_clean.split("t.me/")[-1].split("/")[0]
-            
         owner_chat = bot.get_chat(f"@{owner_clean}")
         if owner_chat.first_name:
             owner_real_name = owner_chat.first_name
-        elif owner_chat.title: # إذا كان قناة وليس حساب شخصي
+        elif owner_chat.title:
             owner_real_name = owner_chat.title
     except Exception as e:
-        print(f"خطأ في جلب اسم المالك: {e}")
+        print(f"خطأ جلب المالك: {e}")
 
-    # 2. جلب الاسم الحقيقي للقناة
+    # --- جلب اسم القناة الحقيقي ---
     channel_raw = data.get('channel_username')
     channel_real_name = channel_raw
     if channel_raw:
@@ -764,24 +761,13 @@ def build_ad_preview(chat_id, uid):
             if ch_chat.title:
                 channel_real_name = ch_chat.title
         except Exception as e:
-            print(f"خطأ في جلب اسم القناة: {e}")
+            print(f"خطأ جلب القناة: {e}")
 
+    # --- توليد النص بالذكاء الاصطناعي ---
     if lang == "عربي":
-        prompt = (
-            "اكتب نصاً ترويجياً قصيراً وأنيقاً لمجموعة تيليجرام باللغة العربية.\n"
-            f"اسم المجموعة: {data['group_name']}\n"
-            f"نوع المجموعة: {data['group_type']}\n"
-            f"مالك المجموعة: {data['owner_username']}\n"
-            "بدون إيموجي، بدون نجوم، بدون علامات اقتباس."
-        )
+        prompt = f"اكتب نصاً ترويجياً قصيراً وأنيقاً لمجموعة تيليجرام باللغة العربية.\nاسم المجموعة: {data['group_name']}\nنوع المجموعة: {data['group_type']}\nمالك المجموعة: {owner_real_name}\nبدون إيموجي، بدون نجوم، بدون علامات اقتباس."
     else:
-        prompt = (
-            "Write a short elegant promotional text for a Telegram group in English.\n"
-            f"Group name: {data['group_name']}\n"
-            f"Group type: {data['group_type']}\n"
-            f"Group owner: {data['owner_username']}\n"
-            "No emojis, no asterisks, no quotes."
-        )
+        prompt = f"Write a short elegant promotional text for a Telegram group in English.\nGroup name: {data['group_name']}\nGroup type: {data['group_type']}\nGroup owner: {owner_real_name}\nNo emojis, no asterisks, no quotes."
 
     try:
         res = client.chat.completions.create(
@@ -791,48 +777,42 @@ def build_ad_preview(chat_id, uid):
     except Exception as e:
         body = f"{data['group_name']} - {data['group_type']}"
 
+    # --- بناء الكليشة ---
     caption = (
         f"<b>{data['group_name']}</b>\n"
         "────────────────────\n\n"
         f"<blockquote>{body}</blockquote>\n\n"
         f"<b>نوع المجموعة:</b> {data['group_type']}\n"
         f"<b>آيدي المجموعة:</b> <code>{data['group_id']}</code>\n"
-        f"<b>المالك:</b> {data['owner_username']}\n"
+        f"<b>المالك:</b> {owner_real_name} (@{owner_clean})\n"
     )
-    if data.get('channel_username'):
-        caption += f"<b>القناة:</b> {data['channel_username']}\n"
+    if channel_raw:
+        caption += f"<b>القناة:</b> {channel_real_name} (@{ch_clean})\n"
 
-    # أزرار القناة فقط
+    # --- أزرار النشر في القناة (تُحفظ للنشر فقط) ---
     pub_markup = InlineKeyboardMarkup(row_width=1)
     if data.get('group_link'):
         pub_markup.add(InlineKeyboardButton(f"رابط {data['group_name']}", url=data['group_link']))
-    
-    owner_clean = data['owner_username'].lstrip('@')
     pub_markup.add(InlineKeyboardButton(f"المالك: {owner_real_name}", url=f"https://t.me/{owner_clean}"))
-    
-    if data.get('channel_username'):
-        ch_clean = data['channel_username'].lstrip('@')
+    if channel_raw:
         pub_markup.add(InlineKeyboardButton(f"القناة: {channel_real_name}", url=f"https://t.me/{ch_clean}"))
-
-    # أزرار المعاينة (نشر/إلغاء)
-    preview_markup = InlineKeyboardMarkup(row_width=1)
-    for btn in pub_markup.keyboard:
-        preview_markup.add(btn[0])
-    preview_markup.add(InlineKeyboardButton("نشر الإعلان", callback_data="ad_confirm_publish"))
-    preview_markup.add(InlineKeyboardButton("إلغاء", callback_data="ad_cancel"))
 
     data['final_caption'] = caption
     data['final_markup'] = pub_markup
 
+    # --- أزرار المعاينة (نشر/إلغاء فقط) ---
+    preview_markup = InlineKeyboardMarkup(row_width=2).add(
+        InlineKeyboardButton("نشر الإعلان الآن", callback_data="ad_confirm_publish"),
+        InlineKeyboardButton("إلغاء", callback_data="ad_cancel")
+    )
+
+    # إرسال المعاينة النظيفة
     if data.get('media_file_id') and data['media_type'] == 'photo':
-        bot.send_photo(chat_id, data['media_file_id'], caption=caption,
-                       reply_markup=preview_markup, parse_mode='HTML')
+        bot.send_photo(chat_id, data['media_file_id'], caption=caption, reply_markup=preview_markup, parse_mode='HTML')
     elif data.get('media_file_id') and data['media_type'] == 'video':
-        bot.send_video(chat_id, data['media_file_id'], caption=caption,
-                       reply_markup=preview_markup, parse_mode='HTML')
+        bot.send_video(chat_id, data['media_file_id'], caption=caption, reply_markup=preview_markup, parse_mode='HTML')
     else:
         bot.send_message(chat_id, caption, reply_markup=preview_markup, parse_mode='HTML')
-
 @bot.callback_query_handler(func=lambda call: call.data == "ad_confirm_publish")
 def ad_confirm_publish(call):
     uid = call.from_user.id
