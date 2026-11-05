@@ -156,7 +156,8 @@ def perform_verification(chat_id, user_id, channel_id):
             bot.edit_message_text("<b>فشل:</b> البوت ليس مشرفاً.", chat_id=chat_id, message_id=msg.message_id, parse_mode='HTML')
     except Exception as e:
         bot.edit_message_text(f"<b>خطأ:</b> {e}", chat_id=chat_id, message_id=msg.message_id, parse_mode='HTML')
-        def get_main_panel(user_id):
+
+def get_main_panel(user_id):
     settings = user_settings.get(user_id, get_default_settings())
     welcome_btn = "تغيير صورة الترحيب (مفعلة)" if settings.get("welcome_photo") else "تعيين صورة الترحيب"
     markup = InlineKeyboardMarkup(row_width=1)
@@ -208,12 +209,9 @@ def trigger_video_mode(call):
     video_gen_state[call.from_user.id] = {'step': 'waiting_for_video'}
     bot.edit_message_text(MENU_TEXTS["waiting_for_video"], chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="menu_create")), parse_mode='HTML')
 
-# --- معالجة الصور (موحدة) ---
 @bot.message_handler(content_types=['photo'])
 def handle_all_photos(message):
     uid = message.from_user.id
-    
-    # 1. غلاف الصوت
     if uid in audio_edit_state and audio_edit_state[uid].get('step') == 'waiting_for_cover':
         try:
             file_path = bot.get_file(message.photo[-1].file_id).file_path
@@ -223,7 +221,6 @@ def handle_all_photos(message):
         except Exception as e: bot.send_message(message.chat.id, f"خطأ: {e}")
         return
 
-    # 2. صورة الترحيب
     if uid in welcome_media_state:
         settings = user_settings.get(uid, get_default_settings())
         settings["welcome_photo"] = message.photo[-1].file_id
@@ -232,7 +229,6 @@ def handle_all_photos(message):
         bot.send_message(message.chat.id, "تم تعيين صورة الترحيب.", reply_markup=get_main_panel(uid))
         return
 
-    # 3. إنشاء محتوى صورة
     if uid in image_gen_state and image_gen_state[uid].get('step') == 'waiting_for_photo':
         image_gen_state[uid]['file_id'] = message.photo[-1].file_id
         image_gen_state[uid]['step'] = 'waiting_category'
@@ -243,7 +239,6 @@ def handle_all_photos(message):
         )
         bot.send_message(message.chat.id, "<b>اختر الفئة:</b>", reply_markup=markup, parse_mode='HTML')
 
-# --- معالجة الفيديو ---
 @bot.message_handler(content_types=['video'])
 def handle_video_new(message):
     uid = message.from_user.id
@@ -333,8 +328,7 @@ def media_format_and_publish(call):
         bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
     else:
         bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
-
-@bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
+        @bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
 def start_gaski_chat(call):
     chat_state[call.from_user.id] = True
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إنهاء الدردشة", callback_data="main_menu"))
@@ -348,7 +342,8 @@ def handle_chat_message(message):
         res = client.chat.completions.create(messages=[{"role": "user", "content": message.text}], model=GROQ_MODEL, max_tokens=500)
         bot.edit_message_text(res.choices[0].message.content, chat_id=message.chat.id, message_id=msg.message_id)
     except Exception as e: bot.edit_message_text(f"خطأ: {e}", chat_id=message.chat.id, message_id=msg.message_id)
-        @bot.callback_query_handler(func=lambda call: call.data == "set_welcome_photo")
+
+@bot.callback_query_handler(func=lambda call: call.data == "set_welcome_photo")
 def set_welcome_photo(call):
     welcome_media_state[call.from_user.id] = True
     bot.edit_message_text("<b>أرسل الصورة:</b>", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء", callback_data="main_menu")), parse_mode='HTML')
@@ -358,7 +353,6 @@ def start_audio_edit(call):
     audio_edit_state[call.from_user.id] = {'step': 'waiting_for_cover', 'cover_data': None}
     bot.edit_message_text(MENU_TEXTS["start_audio_edit"], chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML')
 
-# استقبال الملف الصوتي
 @bot.message_handler(content_types=['audio', 'document'])
 def handle_audio(message):
     uid = message.from_user.id
@@ -379,7 +373,6 @@ def handle_audio(message):
             del audio_edit_state[uid]
         except Exception as e: bot.send_message(message.chat.id, f"خطأ: {e}")
 
-# النشر في القناة
 @bot.callback_query_handler(func=lambda call: call.data.startswith("publish_standalone_audio_"))
 def publish_standalone_audio(call):
     uid = int(call.data.split("_")[3])
@@ -387,11 +380,8 @@ def publish_standalone_audio(call):
     if not target_channel or uid not in audio_cache: return bot.answer_callback_query(call.id, "خطأ.", show_alert=True)
     try:
         cached = audio_cache[uid]
-        
-        # إرسال الصوت
         bot.send_audio(target_channel, io.BytesIO(cached['data']), title="Red World", performer="@Eror_7", thumb=cached['cover'] if cached['cover'] else None)
         
-        # إرسال الزر في رسالة أسفل الصوت
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton("Red World | عالم الأحمر", url=CHANNEL_LINK))
         bot.send_message(target_channel, "<b>حقوق النشر محفوظة | Red World</b>", reply_markup=markup, parse_mode='HTML')
         
@@ -469,6 +459,38 @@ def leave_channel(call):
         save_json(DB_FILE, user_channels)
     bot.answer_callback_query(call.id, "تم فك الارتباط.")
     main_menu(call)
+
+# ==========================================
+#               نظام الإعلانات
+# ==========================================
+@bot.callback_query_handler(func=lambda call: call.data == "start_ad_builder")
+def start_ad_builder(call):
+    ad_builder_state[call.from_user.id] = {'step': 'waiting_group_name'}
+    bot.edit_message_text(MENU_TEXTS["start_ad_builder"], chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML')
+
+@bot.message_handler(func=lambda m: m.from_user.id in ad_builder_state)
+def ad_step_handler(message):
+    uid = message.from_user.id
+    data = ad_builder_state[uid]
+    step = data.get('step')
+    
+    if step == 'waiting_group_name':
+        data['group_name'] = message.text.strip()
+        data['step'] = 'waiting_group_type'
+        markup = InlineKeyboardMarkup(row_width=3).add(
+            InlineKeyboardButton("تمبلر", callback_data="ad_type_تمبلر"), 
+            InlineKeyboardButton("فري", callback_data="ad_type_فري"), 
+            InlineKeyboardButton("مزج", callback_data="ad_type_مزج")
+        )
+        bot.send_message(message.chat.id, "<b>⟨ 2/7 ⟩ اختر نوع المجموعة:</b>", reply_markup=markup, parse_mode='HTML')
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("ad_type_"))
+def ad_set_type(call):
+    uid = call.from_user.id
+    if uid not in ad_builder_state: return
+    ad_builder_state[uid]['group_type'] = call.data.replace("ad_type_", "")
+    ad_builder_state[uid]['step'] = 'waiting_group_link'
+    bot.edit_message_text("<b>⟨ 3/7 ⟩ أرسل رابط المجموعة:</b>", chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML')
 
 print("Red World Bot is running...")
 bot.infinity_polling()
