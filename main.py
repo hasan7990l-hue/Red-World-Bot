@@ -208,9 +208,22 @@ def trigger_video_mode(call):
     video_gen_state[call.from_user.id] = {'step': 'waiting_for_video'}
     bot.edit_message_text(MENU_TEXTS["waiting_for_video"], chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="menu_create")), parse_mode='HTML')
 
+# --- معالجة الصور (موحدة) ---
 @bot.message_handler(content_types=['photo'])
-def handle_photo_new(message):
+def handle_all_photos(message):
     uid = message.from_user.id
+    
+    # 1. غلاف الصوت
+    if uid in audio_edit_state and audio_edit_state[uid].get('step') == 'waiting_for_cover':
+        try:
+            file_path = bot.get_file(message.photo[-1].file_id).file_path
+            audio_edit_state[uid]['cover_data'] = bot.download_file(file_path)
+            audio_edit_state[uid]['step'] = 'waiting_for_audio'
+            bot.send_message(message.chat.id, "<b>⟨ تم حفظ الغلاف ⟩</b>\n\n<blockquote>الآن أرسل ملف الصوت MP3.</blockquote>", parse_mode='HTML')
+        except Exception as e: bot.send_message(message.chat.id, f"خطأ: {e}")
+        return
+
+    # 2. صورة الترحيب
     if uid in welcome_media_state:
         settings = user_settings.get(uid, get_default_settings())
         settings["welcome_photo"] = message.photo[-1].file_id
@@ -219,7 +232,8 @@ def handle_photo_new(message):
         bot.send_message(message.chat.id, "تم تعيين صورة الترحيب.", reply_markup=get_main_panel(uid))
         return
 
-    if uid in image_gen_state and image_gen_state[uid]['step'] == 'waiting_for_photo':
+    # 3. إنشاء محتوى صورة
+    if uid in image_gen_state and image_gen_state[uid].get('step') == 'waiting_for_photo':
         image_gen_state[uid]['file_id'] = message.photo[-1].file_id
         image_gen_state[uid]['step'] = 'waiting_category'
         markup = InlineKeyboardMarkup(row_width=2).add(
@@ -229,10 +243,11 @@ def handle_photo_new(message):
         )
         bot.send_message(message.chat.id, "<b>اختر الفئة:</b>", reply_markup=markup, parse_mode='HTML')
 
+# --- معالجة الفيديو ---
 @bot.message_handler(content_types=['video'])
 def handle_video_new(message):
     uid = message.from_user.id
-    if uid in video_gen_state and video_gen_state[uid]['step'] == 'waiting_for_video':
+    if uid in video_gen_state and video_gen_state[uid].get('step') == 'waiting_for_video':
         video_gen_state[uid]['file_id'] = message.video.file_id
         video_gen_state[uid]['step'] = 'waiting_category'
         markup = InlineKeyboardMarkup(row_width=2).add(
@@ -343,15 +358,6 @@ def start_audio_edit(call):
     audio_edit_state[call.from_user.id] = {'step': 'waiting_for_cover', 'cover_data': None}
     bot.edit_message_text(MENU_TEXTS["start_audio_edit"], chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML')
 
-# استقبال صورة الغلاف
-@bot.message_handler(content_types=['photo'])
-def handle_cover_photo(message):
-    uid = message.from_user.id
-    if uid in audio_edit_state and audio_edit_state[uid]['step'] == 'waiting_for_cover':
-        audio_edit_state[uid]['cover_data'] = bot.download_file(bot.get_file(message.photo[-1].file_id).file_path)
-        audio_edit_state[uid]['step'] = 'waiting_for_audio'
-        bot.send_message(message.chat.id, "<b>⟨ تم حفظ الغلاف ⟩</b>\n\n<blockquote>الآن أرسل ملف الصوت MP3.</blockquote>", parse_mode='HTML')
-
 # استقبال الملف الصوتي
 @bot.message_handler(content_types=['audio', 'document'])
 def handle_audio(message):
@@ -373,7 +379,7 @@ def handle_audio(message):
             del audio_edit_state[uid]
         except Exception as e: bot.send_message(message.chat.id, f"خطأ: {e}")
 
-# النشر في القناة (الحل النهائي لعدم اختفاء الزر)
+# النشر في القناة
 @bot.callback_query_handler(func=lambda call: call.data.startswith("publish_standalone_audio_"))
 def publish_standalone_audio(call):
     uid = int(call.data.split("_")[3])
@@ -382,10 +388,10 @@ def publish_standalone_audio(call):
     try:
         cached = audio_cache[uid]
         
-        # 1. إرسال الصوت فقط
+        # إرسال الصوت
         bot.send_audio(target_channel, io.BytesIO(cached['data']), title="Red World", performer="@Eror_7", thumb=cached['cover'] if cached['cover'] else None)
         
-        # 2. إرسال رسالة أسفل الصوت تحمل الزر (لضمان عدم اختفائه)
+        # إرسال الزر في رسالة أسفل الصوت
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton("Red World | عالم الأحمر", url=CHANNEL_LINK))
         bot.send_message(target_channel, "<b>حقوق النشر محفوظة | Red World</b>", reply_markup=markup, parse_mode='HTML')
         
