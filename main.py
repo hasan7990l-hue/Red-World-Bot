@@ -29,82 +29,18 @@ audio_cache = {}
 user_channels, stats, user_settings = {}, {}, {}
 generated_texts, pending_posts, saved_images = {}, {}, {}
 
-# ==========================================
-#       الكليشات المخصصة لكل زر (القاموس)
-# ==========================================
 MENU_TEXTS = {
-    "main_menu": (
-        "<b>⟨ غرفة التحكم ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>مرحباً بك في مركز إدارة عالم الأحمر.\n"
-        "اختر القسم الذي ترغب في إدارته من الأسفل.</blockquote>"
-    ),
-    "menu_create": (
-        "<b>⟨ استوديو المحتوى ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>من هنا يمكنك إنشاء منشوراتك.\n"
-        "اختر إرسال صورة أو فيديو، وسيقوم الذكاء الاصطناعي بتوليد عبارة مناسبة لك بناءً على الفئة التي تختارها.</blockquote>"
-    ),
-    "menu_tools": (
-        "<b>⟨ أدوات التوليد والنشر ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>هنا تجد أدوات التوليد النصي بالذكاء الاصطناعي، وبناء الإعلانات الترويجية، وختم الحقوق الصوتية للملفات.</blockquote>"
-    ),
-    "start_chat_gaski": (
-        "<b>⟨ دردشة Gaski ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>أهلاً بك في العقل المدبر.\n"
-        "تحدث معي بحرية، اسألني أي شيء، وسأجيبك بأفضل ما لدي.</blockquote>"
-    ),
-    "start_ad_builder": (
-        "<b>⟨ بروتوكول الإعلان ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>سنقوم ببناء إعلان احترافي لمجموعتك.\n"
-        "أجب على الأسئلة خطوة بخطوة، وسيتولى الذكاء الاصطناعي صياغة الإعلان.</blockquote>"
-    ),
-    "start_audio_edit": (
-        "<b>⟨ ختم الحقوق الصوتي ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>أضف غلافك وحقوقك إلى ملفاتك الصوتية.\n"
-        "أرسل صورة الغلاف أولاً، ثم أرسل ملف الصوت MP3.</blockquote>"
-    ),
-    "send_photo_mode": (
-        "<b>⟨ إرسال صورة ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>أرسل الصورة التي تريد إنشاء عبارة عليها.\n"
-        "سيتم تحليل الصورة واقتراح عبارة مناسبة لها بناءً على الفئة التي تختارها لاحقاً.</blockquote>"
-    ),
-    "send_video_mode": (
-        "<b>⟨ إرسال فيديو ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>أرسل الفيديو الذي تريد إنشاء عبارة عليه.\n"
-        "سيتم تحليل الفيديو واقتراح عبارة مناسبة له بناءً على الفئة التي تختارها لاحقاً.</blockquote>"
-    ),
-    "waiting_for_photo": (
-        "<b>⟨ في انتظار الصورة ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>يرجى إرسال الصورة الآن في المحادثة.\n"
-        "اضغط على زر (رجوع) إذا غيرت رأيك.</blockquote>"
-    ),
-    "waiting_for_video": (
-        "<b>⟨ في انتظار الفيديو ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>يرجى إرسال الفيديو الآن في المحادثة.\n"
-        "اضغط على زر (رجوع) إذا غيرت رأيك.</blockquote>"
-    ),
-    "welcome": (
-        "<b>⟨ بوابة عالم الأحمر ⟩</b>\n"
-        "────────────────────\n\n"
-        "<blockquote>"
-        "مرحباً بك في <b>R W | Bot</b>\n"
-        "النظام المتكامل لإدارة قنوات تيليجرام باحترافية.\n\n"
-        "توليد منشورات بالذكاء الاصطناعي\n"
-        "إنشاء إعلانات ترويجية\n"
-        "ختم الحقوق الصوتية\n"
-        "والمزيد من الأدوات في لوحة التحكم."
-        "</blockquote>\n\n"
-        "<i>اضغط على زر لوحة التحكم للبدء.</i>"
-    )
+    "main_menu": "<b>⟨ غرفة التحكم ⟩</b>\n────────────────────\n\n<blockquote>مرحباً بك في مركز إدارة عالم الأحمر.\nاختر القسم الذي ترغب في إدارته من الأسفل.</blockquote>",
+    "menu_create": "<b>⟨ استوديو المحتوى ⟩</b>\n────────────────────\n\n<blockquote>من هنا يمكنك إنشاء منشوراتك.\nاختر إرسال صورة أو فيديو، وسيقوم الذكاء الاصطناعي بتوليد عبارة مناسبة لك بناءً على الفئة التي تختارها.</blockquote>",
+    "menu_tools": "<b>⟨ أدوات التوليد والنشر ⟩</b>\n────────────────────\n\n<blockquote>هنا تجد أدوات التوليد النصي بالذكاء الاصطناعي، وبناء الإعلانات الترويجية، وختم الحقوق الصوتية للملفات.</blockquote>",
+    "start_chat_gaski": "<b>⟨ دردشة Gaski ⟩</b>\n────────────────────\n\n<blockquote>أهلاً بك في العقل المدبر.\nتحدث معي بحرية، اسألني أي شيء، وسأجيبك بأفضل ما لدي.</blockquote>",
+    "start_ad_builder": "<b>⟨ بروتوكول الإعلان ⟩</b>\n────────────────────\n\n<blockquote>سنقوم ببناء إعلان احترافي لمجموعتك.\nأجب على الأسئلة خطوة بخطوة، وسيتولى الذكاء الاصطناعي صياغة الإعلان.</blockquote>",
+    "start_audio_edit": "<b>⟨ ختم الحقوق الصوتي ⟩</b>\n────────────────────\n\n<blockquote>أضف غلافك وحقوقك إلى ملفاتك الصوتية.\nأرسل صورة الغلاف أولاً، ثم أرسل ملف الصوت MP3.</blockquote>",
+    "send_photo_mode": "<b>⟨ إرسال صورة ⟩</b>\n────────────────────\n\n<blockquote>أرسل الصورة التي تريد إنشاء عبارة عليها.\nسيتم تحليل الصورة واقتراح عبارة مناسبة لها بناءً على الفئة التي تختارها لاحقاً.</blockquote>",
+    "send_video_mode": "<b>⟨ إرسال فيديو ⟩</b>\n────────────────────\n\n<blockquote>أرسل الفيديو الذي تريد إنشاء عبارة عليه.\nسيتم تحليل الفيديو واقتراح عبارة مناسبة له بناءً على الفئة التي تختارها لاحقاً.</blockquote>",
+    "waiting_for_photo": "<b>⟨ في انتظار الصورة ⟩</b>\n────────────────────\n\n<blockquote>يرجى إرسال الصورة الآن في المحادثة.\nاضغط على زر (رجوع) إذا غيرت رأيك.</blockquote>",
+    "waiting_for_video": "<b>⟨ في انتظار الفيديو ⟩</b>\n────────────────────\n\n<blockquote>يرجى إرسال الفيديو الآن في المحادثة.\nاضغط على زر (رجوع) إذا غيرت رأيك.</blockquote>",
+    "welcome": "<b>⟨ بوابة عالم الأحمر ⟩</b>\n────────────────────\n\n<blockquote>مرحباً بك في <b>R W | Bot</b>\nالنظام المتكامل لإدارة قنوات تيليجرام باحترافية.\n\nتوليد منشورات بالذكاء الاصطناعي\nإنشاء إعلانات ترويجية\nختم الحقوق الصوتية\nوالمزيد من الأدوات في لوحة التحكم.</blockquote>\n\n<i>اضغط على زر لوحة التحكم للبدء.</i>"
 }
 
 def load_json(file):
@@ -124,9 +60,6 @@ def get_default_settings():
             "language": "عربي", "add_hashtags": True,
             "hashtags": "#RedWorld #عالم_الأحمر", "welcome_photo": None}
 
-# ==========================================
-#               أدوات مساعدة
-# ==========================================
 def convert_to_jpg(image_bytes):
     try:
         img = Image.open(io.BytesIO(image_bytes))
@@ -162,9 +95,6 @@ def check_subscription(user_id):
         except: return False
     return True
 
-# ==========================================
-#               الترحيب والتحقق
-# ==========================================
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_id = message.from_user.id
@@ -176,7 +106,6 @@ def send_welcome(message):
         return bot.send_message(message.chat.id, "<b>بوابة مغلقة</b>\nاشترك أولاً.", reply_markup=markup, parse_mode='HTML')
     
     if user_id not in user_settings: user_settings[user_id] = get_default_settings()
-    
     markup = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton("إضافة البوت لقناتك", url=f"https://t.me/{bot.get_me().username}?startchannel=true"),
         InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel"),
@@ -227,10 +156,7 @@ def perform_verification(chat_id, user_id, channel_id):
             bot.edit_message_text("<b>فشل:</b> البوت ليس مشرفاً.", chat_id=chat_id, message_id=msg.message_id, parse_mode='HTML')
     except Exception as e:
         bot.edit_message_text(f"<b>خطأ:</b> {e}", chat_id=chat_id, message_id=msg.message_id, parse_mode='HTML')
-        # ==========================================
-#               لوحة التحكم
-# ==========================================
-def get_main_panel(user_id):
+        def get_main_panel(user_id):
     settings = user_settings.get(user_id, get_default_settings())
     welcome_btn = "تغيير صورة الترحيب (مفعلة)" if settings.get("welcome_photo") else "تعيين صورة الترحيب"
     markup = InlineKeyboardMarkup(row_width=1)
@@ -265,17 +191,13 @@ def menu_create(call):
 
 @bot.callback_query_handler(func=lambda call: call.data == "menu_tools")
 def menu_tools(call):
-    markup = InlineKeyboardMarkup(row_width=1)
-    markup.add(
+    markup = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton("إنشاء إعلان ترويجي", callback_data="start_ad_builder"),
         InlineKeyboardButton("حقوق النشر الصوتي", callback_data="start_audio_edit"),
         InlineKeyboardButton("رجوع", callback_data="main_menu")
     )
     bot.edit_message_text(MENU_TEXTS["menu_tools"], chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode='HTML')
 
-# ==========================================
-#               نظام الصور والفيديو
-# ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "send_photo_mode")
 def trigger_photo_mode(call):
     image_gen_state[call.from_user.id] = {'step': 'waiting_for_photo'}
@@ -368,11 +290,7 @@ def media_format_and_publish(call):
 
     bot.edit_message_text("⏳ جاري توليد العبارة...", chat_id=call.message.chat.id, message_id=call.message.message_id)
     
-    if lang == "مختلط":
-        lang_instr = "جملة عربية قصيرة ثم ترجمتها الإنجليزية في السطر التالي"
-    else:
-        lang_instr = "باللغة العربية الفصحى"
-
+    lang_instr = "جملة عربية قصيرة ثم ترجمتها الإنجليزية في السطر التالي" if lang == "مختلط" else "باللغة العربية الفصحى"
     prompt = f"اكتب عبارة قصيرة جداً من سطر واحد بأسلوب {category} ({lang_instr}). بدون إيموجي، بدون نجوم، بدون علامات اقتباس."
     
     try:
@@ -386,14 +304,8 @@ def media_format_and_publish(call):
     
     post_id = str(int(time.time()))
     pending_posts[post_id] = {
-        'type': media_type, 
-        'file_id': file_id, 
-        'caption': final_caption, 
-        'channel': user_channels.get(str(uid)),
-        'category': category,
-        'language': lang,
-        'format': fmt,
-        'is_img': is_img
+        'type': media_type, 'file_id': file_id, 'caption': final_caption, 'channel': user_channels.get(str(uid)),
+        'category': category, 'language': lang, 'format': fmt, 'is_img': is_img
     }
     
     markup = InlineKeyboardMarkup(row_width=1).add(
@@ -407,9 +319,6 @@ def media_format_and_publish(call):
     else:
         bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
 
-# ==========================================
-#               الدردشة Gaski
-# ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
 def start_gaski_chat(call):
     chat_state[call.from_user.id] = True
@@ -424,10 +333,7 @@ def handle_chat_message(message):
         res = client.chat.completions.create(messages=[{"role": "user", "content": message.text}], model=GROQ_MODEL, max_tokens=500)
         bot.edit_message_text(res.choices[0].message.content, chat_id=message.chat.id, message_id=msg.message_id)
     except Exception as e: bot.edit_message_text(f"خطأ: {e}", chat_id=message.chat.id, message_id=msg.message_id)
-        # ==========================================
-#               صورة الترحيب والصوت
-# ==========================================
-@bot.callback_query_handler(func=lambda call: call.data == "set_welcome_photo")
+        @bot.callback_query_handler(func=lambda call: call.data == "set_welcome_photo")
 def set_welcome_photo(call):
     welcome_media_state[call.from_user.id] = True
     bot.edit_message_text("<b>أرسل الصورة:</b>", chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء", callback_data="main_menu")), parse_mode='HTML')
@@ -437,22 +343,37 @@ def start_audio_edit(call):
     audio_edit_state[call.from_user.id] = {'step': 'waiting_for_cover', 'cover_data': None}
     bot.edit_message_text(MENU_TEXTS["start_audio_edit"], chat_id=call.message.chat.id, message_id=call.message.message_id, parse_mode='HTML')
 
+# استقبال صورة الغلاف
+@bot.message_handler(content_types=['photo'])
+def handle_cover_photo(message):
+    uid = message.from_user.id
+    if uid in audio_edit_state and audio_edit_state[uid]['step'] == 'waiting_for_cover':
+        audio_edit_state[uid]['cover_data'] = bot.download_file(bot.get_file(message.photo[-1].file_id).file_path)
+        audio_edit_state[uid]['step'] = 'waiting_for_audio'
+        bot.send_message(message.chat.id, "<b>⟨ تم حفظ الغلاف ⟩</b>\n\n<blockquote>الآن أرسل ملف الصوت MP3.</blockquote>", parse_mode='HTML')
+
+# استقبال الملف الصوتي
 @bot.message_handler(content_types=['audio', 'document'])
 def handle_audio(message):
     uid = message.from_user.id
-    if uid in audio_edit_state:
+    if uid in audio_edit_state and audio_edit_state[uid]['step'] == 'waiting_for_audio':
         file_id = message.audio.file_id if message.content_type == 'audio' else (message.document.file_id if message.document.mime_type == 'audio/mpeg' else None)
         if not file_id: return bot.reply_to(message, "أرسل MP3.")
         try:
             audio_data = bot.download_file(bot.get_file(file_id).file_path)
-            cover_data = audio_edit_state[uid].get('cover_data') or b''
+            cover_data = audio_edit_state[uid].get('cover_data')
+            if not cover_data: return bot.reply_to(message, "لم يتم العثور على الغلاف.")
+            
             rebuilt, cover_jpg = rebuild_audio_with_cover(audio_data, cover_data)
             audio_cache[uid] = {'data': rebuilt, 'cover': cover_jpg}
             
             markup = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("نشر في القناة", callback_data=f"publish_standalone_audio_{uid}"))
-            bot.send_audio(message.chat.id, io.BytesIO(rebuilt), title="Red World", performer="@Eror_7", thumb=cover_jpg if cover_jpg else None, reply_markup=markup)
+            bot.send_audio(message.chat.id, io.BytesIO(rebuilt), title="Red World", performer="@Eror_7", thumb=cover_jpg if cover_jpg else None)
+            bot.send_message(message.chat.id, "<b>⟨ جاهز للنشر ⟩</b>", reply_markup=markup, parse_mode='HTML')
+            del audio_edit_state[uid]
         except Exception as e: bot.send_message(message.chat.id, f"خطأ: {e}")
 
+# النشر في القناة (الحل النهائي لعدم اختفاء الزر)
 @bot.callback_query_handler(func=lambda call: call.data.startswith("publish_standalone_audio_"))
 def publish_standalone_audio(call):
     uid = int(call.data.split("_")[3])
@@ -460,38 +381,29 @@ def publish_standalone_audio(call):
     if not target_channel or uid not in audio_cache: return bot.answer_callback_query(call.id, "خطأ.", show_alert=True)
     try:
         cached = audio_cache[uid]
+        
+        # 1. إرسال الصوت فقط
+        bot.send_audio(target_channel, io.BytesIO(cached['data']), title="Red World", performer="@Eror_7", thumb=cached['cover'] if cached['cover'] else None)
+        
+        # 2. إرسال رسالة أسفل الصوت تحمل الزر (لضمان عدم اختفائه)
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton("Red World | عالم الأحمر", url=CHANNEL_LINK))
-        bot.send_audio(target_channel, io.BytesIO(cached['data']), title="Red World", performer="@Eror_7", thumb=cached['cover'] if cached['cover'] else None, reply_markup=markup)
+        bot.send_message(target_channel, "<b>حقوق النشر محفوظة | Red World</b>", reply_markup=markup, parse_mode='HTML')
+        
         bot.answer_callback_query(call.id, "تم النشر.")
-        if uid in audio_edit_state: del audio_edit_state[uid]
         if uid in audio_cache: del audio_cache[uid]
         main_menu(call)
     except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
 
-# ==========================================
-#               تغيير العبارة (جديد)
-# ==========================================
 @bot.callback_query_handler(func=lambda call: call.data.startswith("regen_"))
 def regenerate_caption(call):
     post_id = call.data.split("_")[1]
-    if post_id not in pending_posts:
-        return bot.answer_callback_query(call.id, "انتهت الصلاحية.", show_alert=True)
-    
+    if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية.", show_alert=True)
     data = pending_posts[post_id]
     bot.answer_callback_query(call.id, "جاري توليد عبارة جديدة...")
     
-    category = data.get('category', 'فلسفي')
-    lang = data.get('language', 'عربي')
-    fmt = data.get('format', 'bold')
-    file_id = data['file_id']
-    media_type = data['type']
-    
-    if lang == "مختلط":
-        lang_instr = "جملة عربية قصيرة ثم ترجمتها الإنجليزية في السطر التالي"
-    else:
-        lang_instr = "باللغة العربية الفصحى"
-
-    prompt = f"اكتب عبارة قصيرة جداً من سطر واحد بأسلوب {category} ({lang_instr}). بدون إيموجي، بدون نجوم، بدون علامات اقتباس. استخدم أسلوباً مختلفاً عن المرة السابقة."
+    category = data.get('category', 'فلسفي'); lang = data.get('language', 'عربي'); fmt = data.get('format', 'bold'); file_id = data['file_id']; media_type = data['type']
+    lang_instr = "جملة عربية قصيرة ثم ترجمتها الإنجليزية في السطر التالي" if lang == "مختلط" else "باللغة العربية الفصحى"
+    prompt = f"اكتب عبارة قصيرة جداً من سطر واحد بأسلوب {category} ({lang_instr}). بدون إيموجي، استخدم أسلوباً مختلفاً."
     
     try:
         res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=GROQ_MODEL, max_tokens=150)
@@ -501,7 +413,6 @@ def regenerate_caption(call):
     final_text = f"<i>{raw_text}</i>" if fmt == "italic" else f"<b>{raw_text}</b>"
     settings = user_settings.get(call.from_user.id, get_default_settings())
     final_caption = f"{final_text}\n\n{settings.get('hashtags', '')}"
-    
     data['caption'] = final_caption
     pending_posts[post_id] = data
     
@@ -510,18 +421,11 @@ def regenerate_caption(call):
         InlineKeyboardButton("نشر الآن في القناة", callback_data=f"confirm_{post_id}"),
         InlineKeyboardButton("إلغاء", callback_data="main_menu")
     )
-    
     try: bot.delete_message(call.message.chat.id, call.message.message_id)
     except: pass
-    
-    if media_type == 'photo':
-        bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة جديدة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
-    else:
-        bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة جديدة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+    if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة جديدة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+    else: bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة جديدة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
 
-# ==========================================
-#               النشر والتأكيد
-# ==========================================
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def confirm_post(call):
     post_id = call.data.split("_")[1]
@@ -536,9 +440,6 @@ def confirm_post(call):
         main_menu(call)
     except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
 
-# ==========================================
-#               السورس والخروج
-# ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "show_source")
 def show_source(call):
     bot.answer_callback_query(call.id)
