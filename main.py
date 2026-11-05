@@ -56,9 +56,7 @@ stats = load_json(STATS_FILE)
 if "published_count" not in stats: stats["published_count"] = 0
 
 def get_default_settings():
-    return {"status": "ON", "text_only_mode": False, "category": "فلسفي",
-            "language": "عربي", "add_hashtags": True,
-            "hashtags": "#RedWorld #عالم_الأحمر", "welcome_photo": None}
+    return {"status": "ON", "text_only_mode": False, "category": "فلسفي", "language": "عربي", "add_hashtags": True, "hashtags": "#RedWorld #عالم_الأحمر", "welcome_photo": None}
 
 def convert_to_jpg(image_bytes):
     try:
@@ -341,9 +339,20 @@ def publish_standalone_audio(call):
     if not target_channel or uid not in audio_cache: return bot.answer_callback_query(call.id, "خطأ.", show_alert=True)
     try:
         cached = audio_cache[uid]
-        bot.send_audio(target_channel, io.BytesIO(cached['data']), title="Red World", performer="@Eror_7", thumb=cached['cover'] if cached['cover'] else None)
-        markup = InlineKeyboardMarkup().add(InlineKeyboardButton("Red World | عالم الأحمر", url=CHANNEL_LINK))
-        bot.send_message(target_channel, "<b>حقوق النشر محفوظة | Red World</b>", reply_markup=markup, parse_mode='HTML')
+        
+        # إرسال الصوت مع الزر الملتصق به مباشرة (بدون رسالة منفصلة)
+        markup = InlineKeyboardMarkup(row_width=1).add(
+            InlineKeyboardButton("Red World | عالم الأحمر", url=CHANNEL_LINK)
+        )
+        bot.send_audio(
+            target_channel, 
+            io.BytesIO(cached['data']), 
+            title="Red World", 
+            performer="@Eror_7", 
+            thumb=cached['cover'] if cached['cover'] else None,
+            reply_markup=markup  # الزر هنا ملتصق بالملف الصوتي
+        )
+        
         bot.answer_callback_query(call.id, "تم النشر.")
         if uid in audio_cache: del audio_cache[uid]
         main_menu(call)
