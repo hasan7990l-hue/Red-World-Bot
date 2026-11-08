@@ -10,7 +10,7 @@ from PIL import Image
 # 1. الإعدادات الأساسية
 # ==========================================
 TELEGRAM_TOKEN = "8180650384:AAHX37rerimsZIWBEc71HleexJKWqSaSsZ0"
-GROQ_API_KEY   = "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"
+GROQ_API_KEY   = "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"
 ADMIN_ID = 8456056018
 CHANNEL_LINK = "https://t.me/Eror_7"
 GROQ_MODEL = "openai/gpt-oss-120b" 
