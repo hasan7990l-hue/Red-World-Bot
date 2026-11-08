@@ -7,7 +7,7 @@ from mutagen.id3 import ID3, APIC, TIT2, TPE1, error as ID3Error
 from PIL import Image
 
 TELEGRAM_TOKEN = "8180650384:AAHX37rerimsZIWBEc71HleexJKWqSaSsZ0"
-GROQ_API_KEY   = "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"
+GROQ_API_KEY   = "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"
 ADMIN_ID = 8456056018
 FORCE_CHANNELS = ["@Eror_7", "@lb2_c"]
 CHANNEL_LINK = "https://t.me/Eror_7"
