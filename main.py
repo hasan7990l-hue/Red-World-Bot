@@ -320,7 +320,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط (مضمون 100%)
+# 8. إعدادات الوسائط (تم الإصلاح النهائي)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -368,6 +368,7 @@ def save_media(message, key, media_type, msg_id_to_delete):
     if message.text and message.text == "إلغاء": return
     
     file_id = None
+    # التحقق الشامل (صورة أو فيديو أو مستند)
     if media_type == "photo":
         if message.photo:
             file_id = message.photo[-1].file_id
