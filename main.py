@@ -368,7 +368,7 @@ def media_upload_choice(call):
     bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
 
 # ==========================================
-# 9. إدارة الاشتراك الإجباري (تم إصلاحه)
+# 9. إدارة الاشتراك الإجباري (تم إصلاحه نهائياً)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
 def admin_channels(call):
@@ -459,7 +459,7 @@ def trigger_video_mode(call):
     send_or_edit(call, MENU_TEXTS["waiting_for_video"], markup)
 
 # ==========================================
-# 11. معالج الوسائط الشامل (تم إصلاحه)
+# 11. معالج الوسائط الشامل
 # ==========================================
 @bot.message_handler(content_types=['photo', 'video', 'video_note'])
 def handle_media(message):
