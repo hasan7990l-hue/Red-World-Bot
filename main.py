@@ -435,6 +435,30 @@ def save_new_channel(message, msg_id_to_delete):
     safe_delete(message.chat.id, msg_id_to_delete)
     bot.send_message(message.chat.id, f"<b>تم إضافة القناة:</b> {channel_name}", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_channels")), parse_mode='HTML')
 
+@bot.callback_query_handler(func=lambda call: call.data == "admin_broadcast")
+def admin_broadcast(call):
+    if call.from_user.id != ADMIN_ID: return
+    text = "<b>الإذاعة</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>أرسل الرسالة التي تريد إذاعتها لجميع المستخدمين.</b>"
+    markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_panel"))
+    safe_delete(call.message.chat.id, call.message.message_id)
+    msg = bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
+    bot.register_next_step_handler(msg, do_broadcast, msg.message_id)
+
+def do_broadcast(message, msg_id_to_delete):
+    if message.from_user.id != ADMIN_ID: return
+    if message.text and message.text == "إلغاء": return
+    success, failed = 0, 0
+    msg = bot.send_message(message.chat.id, "<b>جاري الإذاعة...</b>", parse_mode='HTML')
+    for uid in user_settings.keys():
+        try:
+            bot.send_message(uid, f"<b>إعلان من المطور:</b>\n\n{message.text}", parse_mode='HTML')
+            success += 1
+            time.sleep(0.1)
+        except: failed += 1
+    safe_delete(message.chat.id, message.message_id)
+    safe_delete(message.chat.id, msg_id_to_delete)
+    bot.edit_message_text(f"<b>تم الإرسال لـ {success} مستخدم.\nفشل لـ {failed}.</b>", chat_id=message.chat.id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_panel")), parse_mode='HTML')
+
 # ==========================================
 # 10. إنشاء المحتوى
 # ==========================================
@@ -465,7 +489,6 @@ def trigger_video_mode(call):
 def handle_media(message):
     uid = message.from_user.id
     
-    # 1. حفظ وسائط المطور
     if uid == ADMIN_ID and uid in media_save_state:
         state = media_save_state[uid]
         key = state['key']
@@ -488,7 +511,6 @@ def handle_media(message):
         bot.send_message(message.chat.id, "<b>تم حفظ الوسائط بنجاح.</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_media_settings")), parse_mode='HTML')
         return
 
-    # 2. إنشاء صورة
     if uid in image_gen_state and image_gen_state[uid].get('step') == 'waiting_for_photo':
         if message.photo:
             safe_delete(message.chat.id, message.message_id)
@@ -516,7 +538,6 @@ def handle_media(message):
             bot.send_message(message.chat.id, "<b>اختر الفئة:</b>", reply_markup=markup, parse_mode='HTML')
             return
 
-    # 3. إنشاء فيديو
     if uid in video_gen_state and video_gen_state[uid].get('step') == 'waiting_for_video':
         if message.video or message.video_note:
             safe_delete(message.chat.id, message.message_id)
