@@ -1,7 +1,7 @@
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from groq import Groq
-import time, json, os, io, re
+import time, json, os, io, re, html
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, TIT2, TPE1, error as ID3Error
 from PIL import Image
@@ -97,7 +97,7 @@ MENU_TEXTS = {
     "start_ad_builder": (
         "<b>بروتوكول الإعلان</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-        "<b>↺ سنقوم ببناء إعلان احترافي.</b>\n\n"
+        "<b>↺ أرسل اسم المجموعة الآن لبدء الإعلان.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     ),
     "start_audio_edit": (
@@ -178,7 +178,7 @@ def safe_delete(chat_id, message_id):
     except: pass
 
 def get_mention(user):
-    name = user.first_name
+    name = html.escape(user.first_name)
     return f"<a href='tg://user?id={user.id}'><b>{name}</b></a>"
 
 def send_panel(chat_id, text, markup, media_key=None):
@@ -217,7 +217,6 @@ def send_welcome(message):
     if user_id not in user_settings: user_settings[user_id] = get_default_settings()
     
     markup = InlineKeyboardMarkup(row_width=1).add(
-        InlineKeyboardButton("إضافة البوت لقناتك", url=f"https://t.me/{bot.get_me().username}?startchannel=true"),
         InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel"),
         InlineKeyboardButton("المبرمج", url=f"tg://user?id={ADMIN_ID}"))
     
@@ -320,7 +319,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط (تم حل المشكلة النهائية)
+# 8. إعدادات الوسائط
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -367,7 +366,7 @@ def media_upload_choice(call):
     bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
 
 # ==========================================
-# 9. إدارة الاشتراك الإجباري (تم إصلاحه)
+# 9. إدارة الاشتراك الإجباري
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
 def admin_channels(call):
@@ -612,6 +611,7 @@ def media_format_and_publish(call):
     
     markup = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton("إضافة زر مخصص للمنشور", callback_data=f"add_btn_{post_id}"),
+        InlineKeyboardButton("تغيير العبارة", callback_data=f"change_caption_{post_id}"),
         InlineKeyboardButton("تخطي وإكمال النشر", callback_data=f"confirm_{post_id}"),
         InlineKeyboardButton("إلغاء", callback_data="main_menu")
     )
@@ -619,6 +619,35 @@ def media_format_and_publish(call):
     safe_delete(call.message.chat.id, msg.message_id)
     if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"<b>معاينة</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
     else: bot.send_video(call.message.chat.id, file_id, caption=f"<b>معاينة</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("change_caption_"))
+def change_caption(call):
+    post_id = call.data.split("_")[2]
+    if post_id not in pending_posts: return bot.answer_callback_query(call.id, "انتهت الصلاحية.")
+    data = pending_posts[post_id]
+    
+    bot.answer_callback_query(call.id, "جاري توليد عبارة جديدة...")
+    category = data.get('category', 'فلسفي'); lang = data.get('language', 'عربي'); fmt = data.get('format', 'bold'); file_id = data['file_id']; media_type = data['type']
+    lang_instr = "جملة عربية قصيرة ثم ترجمتها الإنجليزية في السطر التالي" if lang == "مختلط" else "باللغة العربية الفصحى"
+    prompt = f"اكتب عبارة قصيرة جداً بأسلوب {category} ({lang_instr}). بدون إيموجي."
+    try:
+        res = client.chat.completions.create(messages=[{"role": "user", "content": prompt}], model=GROQ_MODEL, max_tokens=150)
+        raw_text = res.choices[0].message.content.strip()
+    except: raw_text = "عبارة تجريبية."
+    final_text = f"<i>{raw_text}</i>" if fmt == "italic" else f"<b>{raw_text}</b>"
+    settings = user_settings.get(call.from_user.id, get_default_settings())
+    final_caption = f"<b>{final_text}</b>\n\n<b>{settings.get('hashtags', '')}</b>"
+    data['caption'] = final_caption
+    pending_posts[post_id] = data
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton("إضافة زر مخصص للمنشور", callback_data=f"add_btn_{post_id}"),
+        InlineKeyboardButton("تغيير العبارة", callback_data=f"change_caption_{post_id}"),
+        InlineKeyboardButton("تخطي وإكمال النشر", callback_data=f"confirm_{post_id}"),
+        InlineKeyboardButton("إلغاء", callback_data="main_menu")
+    )
+    safe_delete(call.message.chat.id, call.message.message_id)
+    if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"<b>معاينة جديدة</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+    else: bot.send_video(call.message.chat.id, file_id, caption=f"<b>معاينة جديدة</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("add_btn_"))
 def ask_button_text(call):
