@@ -320,7 +320,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط (تم حل مشكلة force_sub والإشعار)
+# 8. إعدادات الوسائط
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
