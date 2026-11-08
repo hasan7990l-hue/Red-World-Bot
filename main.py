@@ -320,7 +320,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط (تم الحل النهائي للفيديو)
+# 8. إعدادات الوسائط (تم الإصلاح الجذري)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -456,26 +456,23 @@ def trigger_video_mode(call):
     send_or_edit(call, MENU_TEXTS["waiting_for_video"], markup)
 
 # ==========================================
-# 11. معالج الوسائط الشامل (يحل مشكلة الفيديو والصورة)
+# 11. معالج الوسائط الشامل (تم إصلاحه)
 # ==========================================
-@bot.message_handler(content_types=['photo', 'video', 'document', 'video_note'])
-def handle_all_media(message):
+@bot.message_handler(content_types=['photo', 'video', 'video_note'])
+def handle_media(message):
     uid = message.from_user.id
     
-    # 1. إذا كان المطور يحفظ وسائط
+    # 1. حفظ وسائط المطور
     if uid == ADMIN_ID and uid in media_save_state:
         state = media_save_state[uid]
         key = state['key']
         mtype = state['type']
         
         file_id = None
-        if mtype == "photo":
-            if message.photo: file_id = message.photo[-1].file_id
-            elif message.document and message.document.mime_type.startswith('image/'): file_id = message.document.file_id
+        if mtype == "photo" and message.photo: file_id = message.photo[-1].file_id
         elif mtype == "video":
             if message.video: file_id = message.video.file_id
             elif message.video_note: file_id = message.video_note.file_id
-            elif message.document and message.document.mime_type.startswith('video/'): file_id = message.document.file_id
             
         if not file_id:
             return bot.reply_to(message, "<b>نوع الملف غير صحيح. يرجى إرسال الصورة أو الفيديو المطلوب.</b>", parse_mode='HTML')
@@ -488,15 +485,11 @@ def handle_all_media(message):
         bot.send_message(message.chat.id, "<b>تم حفظ الوسائط بنجاح.</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_media_settings")), parse_mode='HTML')
         return
 
-    # 2. إنشاء محتوى (صورة)
+    # 2. إنشاء صورة
     if uid in image_gen_state and image_gen_state[uid].get('step') == 'waiting_for_photo':
-        file_id = None
-        if message.photo: file_id = message.photo[-1].file_id
-        elif message.document and message.document.mime_type.startswith('image/'): file_id = message.document.file_id
-        
-        if file_id:
+        if message.photo:
             safe_delete(message.chat.id, message.message_id)
-            image_gen_state[uid]['file_id'] = file_id
+            image_gen_state[uid]['file_id'] = message.photo[-1].file_id
             image_gen_state[uid]['step'] = 'waiting_category'
             markup = InlineKeyboardMarkup(row_width=2).add(
                 InlineKeyboardButton("حزين", callback_data="img_cat_حزين"), 
@@ -520,15 +513,11 @@ def handle_all_media(message):
             bot.send_message(message.chat.id, "<b>اختر الفئة:</b>", reply_markup=markup, parse_mode='HTML')
             return
 
-    # 3. إنشاء محتوى (فيديو)
+    # 3. إنشاء فيديو
     if uid in video_gen_state and video_gen_state[uid].get('step') == 'waiting_for_video':
-        file_id = None
-        if message.video: file_id = message.video.file_id
-        elif message.video_note: file_id = message.video_note.file_id
-        elif message.document and message.document.mime_type.startswith('video/'): file_id = message.document.file_id
-        
-        if file_id:
+        if message.video or message.video_note:
             safe_delete(message.chat.id, message.message_id)
+            file_id = message.video.file_id if message.video else message.video_note.file_id
             video_gen_state[uid]['file_id'] = file_id
             video_gen_state[uid]['step'] = 'waiting_category'
             markup = InlineKeyboardMarkup(row_width=2).add(
@@ -540,6 +529,9 @@ def handle_all_media(message):
             bot.send_message(message.chat.id, "<b>اختر الفئة:</b>", reply_markup=markup, parse_mode='HTML')
             return
 
+# ==========================================
+# 12. باقي الأزرار
+# ==========================================
 @bot.callback_query_handler(func=lambda call: call.data.startswith("img_cat_") or call.data.startswith("vid_cat_"))
 def media_category(call):
     uid = call.from_user.id
@@ -666,9 +658,6 @@ def confirm_post(call):
         main_menu(call)
     except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
 
-# ==========================================
-# 12. باقي الأزرار
-# ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
 def start_gaski_chat(call):
     chat_state[call.from_user.id] = True
