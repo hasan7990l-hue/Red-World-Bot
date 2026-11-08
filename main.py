@@ -22,7 +22,7 @@ CONFIG_FILE = "bot_config.json"
 audio_edit_state, ad_builder_state = {}, {}
 image_gen_state, video_gen_state, chat_state = {}, {}, {}
 audio_cache, user_channels, stats, user_settings, pending_posts = {}, {}, {}, {}, {}
-media_save_state = {} # حالة حفظ الوسائط
+media_save_state = {}
 
 # ==========================================
 # 2. إدارة الإعدادات والحفظ
@@ -320,7 +320,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط (تم حل مشكلة force_sub)
+# 8. إعدادات الوسائط (تم حل مشكلة force_sub والإشعار)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -356,21 +356,19 @@ def media_upload_choice(call):
     key = parts[2]
     media_type = parts[3]
     
-    # ✅ حل مشكلة force_sub: دمج الأجزاء إذا كان المفتاح يحتوي على شرطة سفلية
     if len(parts) > 4:
         key = "_".join(parts[2:-1])
     
-    media_save_state[call.from_user.id] = {'key': key, 'type': media_type, 'msg_id': call.message.message_id}
+    media_save_state[call.from_user.id] = {'key': key, 'type': media_type}
     
     text = f"<b>أرسل الـ{media_type} الآن</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>سيتم حفظ الوسائط وتعيينها.</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_media_settings"))
     
     safe_delete(call.message.chat.id, call.message.message_id)
-    msg = bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
-    media_save_state[call.from_user.id]['msg_id'] = msg.message_id
+    bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
 
 # ==========================================
-# 9. إدارة الاشتراك الإجباري
+# 9. إدارة الاشتراك الإجباري (تم إصلاحه)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
 def admin_channels(call):
@@ -461,7 +459,7 @@ def trigger_video_mode(call):
     send_or_edit(call, MENU_TEXTS["waiting_for_video"], markup)
 
 # ==========================================
-# 11. معالج الوسائط الشامل (لحل مشكلة الحفظ والحذف)
+# 11. معالج الوسائط الشامل (تم إصلاحه)
 # ==========================================
 @bot.message_handler(content_types=['photo', 'video', 'video_note'])
 def handle_media(message):
@@ -472,7 +470,6 @@ def handle_media(message):
         state = media_save_state[uid]
         key = state['key']
         mtype = state['type']
-        msg_id_to_delete = state.get('msg_id')
         
         file_id = None
         if mtype == "photo" and message.photo: file_id = message.photo[-1].file_id
@@ -481,17 +478,13 @@ def handle_media(message):
             elif message.video_note: file_id = message.video_note.file_id
             
         if not file_id:
-            safe_delete(message.chat.id, message.message_id)
             return bot.reply_to(message, "<b>نوع الملف غير صحيح. يرجى إرسال الصورة أو الفيديو المطلوب.</b>", parse_mode='HTML')
             
         config_data["media"][key] = file_id
         save_config(config_data)
         del media_save_state[uid]
         
-        # حذف رسالة المستخدم ورسالة الطلب السابقة
         safe_delete(message.chat.id, message.message_id)
-        if msg_id_to_delete: safe_delete(message.chat.id, msg_id_to_delete)
-        
         bot.send_message(message.chat.id, "<b>تم حفظ الوسائط بنجاح.</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_media_settings")), parse_mode='HTML')
         return
 
