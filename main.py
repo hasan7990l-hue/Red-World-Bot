@@ -55,7 +55,7 @@ def get_default_settings():
     return {"status": "ON", "category": "فلسفي", "language": "عربي", "hashtags": "#RedWorld #عالم_الأحمر"}
 
 # ==========================================
-# 3. الكليشات الفخمة (بدون إيموجي وبخط عريض)
+# 3. الكليشات (بدون إيموجي، بخط عريض، ومزينة بالسهم ↺)
 # ==========================================
 MENU_TEXTS = {
     "main_menu": (
@@ -64,81 +64,79 @@ MENU_TEXTS = {
         "<b>مرحباً بك في مركز إدارة عالم الأحمر.</b>\n"
         "<b>هنا تجد كل ما تحتاجه لإدارة محتواك وقناتك باحترافية تامة.</b>\n\n"
         "<b>الأقسام المتاحة:</b>\n\n"
-        "<b>إنشاء محتوى:</b> <b>لتصميم منشوراتك (صور وفيديو).</b>\n"
-        "<b>التوليد النصي:</b> <b>لإنشاء إعلاناتك وحقوقك الصوتية.</b>\n"
-        "<b>دردشة Gaski:</b> <b>للتحدث مع الذكاء الاصطناعي.</b>\n"
-        "<b>السورس:</b> <b>لمعرفة معلومات النظام.</b>\n"
-        "<b>مغادرة القناة:</b> <b>لفك ارتباط البوت بقناتك.</b>\n\n"
+        "<b>↺ إنشاء محتوى:</b> <b>لتصميم منشوراتك (صور وفيديو).</b>\n"
+        "<b>↺ التوليد النصي:</b> <b>لإنشاء إعلاناتك وحقوقك الصوتية.</b>\n"
+        "<b>↺ دردشة Gaski:</b> <b>للتحدث مع الذكاء الاصطناعي.</b>\n"
+        "<b>↺ السورس:</b> <b>لمعرفة معلومات النظام.</b>\n"
+        "<b>↺ مغادرة القناة:</b> <b>لفك ارتباط البوت بقناتك.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     ),
     "menu_create": (
         "<b>استوديو المحتوى</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-        "<b>من هنا يمكنك إنشاء منشوراتك بسهولة.</b>\n"
-        "<b>اختر إرسال صورة أو فيديو، وسيقوم الذكاء الاصطناعي بتوليد عبارة مناسبة لك.</b>\n\n"
-        "<b>إرسال صورة:</b> <b>لتصميم صورة مع عبارة.</b>\n"
-        "<b>إرسال فيديو:</b> <b>لتصميم فيديو مع عبارة.</b>\n\n"
+        "<b>من هنا يمكنك إنشاء منشوراتك بسهولة.</b>\n\n"
+        "<b>↺ إرسال صورة:</b> <b>لتصميم صورة مع عبارة.</b>\n"
+        "<b>↺ إرسال فيديو:</b> <b>لتصميم فيديو مع عبارة.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     ),
     "menu_tools": (
         "<b>أدوات النشر</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-        "<b>هنا تجد أدوات التوليد النصي، وبناء الإعلانات، وختم الحقوق الصوتية.</b>\n\n"
-        "<b>إعلان ترويجي:</b> <b>لبناء إعلان احترافي لمجموعتك.</b>\n"
-        "<b>حقوق النشر:</b> <b>لإضافة غلاف صوتي.</b>\n\n"
+        "<b>↺ إعلان ترويجي:</b> <b>لبناء إعلان احترافي لمجموعتك.</b>\n"
+        "<b>↺ حقوق النشر:</b> <b>لإضافة غلاف صوتي.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     ),
     "start_chat_gaski": (
         "<b>دردشة Gaski</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-        "<b>أهلاً بك في العقل المدبر.</b>\n"
-        "<b>تحدث معي بحرية، اسألني أي شيء، وسأجيبك فوراً.</b>\n\n"
+        "<b>↺ أهلاً بك في العقل المدبر.</b>\n"
+        "<b>↺ تحدث معي بحرية، اسألني أي شيء، وسأجيبك فوراً.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     ),
     "start_ad_builder": (
         "<b>بروتوكول الإعلان</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-        "<b>سنقوم ببناء إعلان احترافي لمجموعتك خطوة بخطوة.</b>\n\n"
+        "<b>↺ سنقوم ببناء إعلان احترافي لمجموعتك خطوة بخطوة.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     ),
     "start_audio_edit": (
         "<b>ختم الحقوق</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-        "<b>أرسل صورة الغلاف أولاً، ثم أرسل ملف الصوت MP3.</b>\n\n"
+        "<b>↺ أرسل صورة الغلاف أولاً.</b>\n"
+        "<b>↺ ثم أرسل ملف الصوت MP3.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     ),
-    "send_photo_mode": "<b>أرسل الصورة الآن:</b>\n\n<b>سيتم تصميمها وإضافة العبارة.</b>",
-    "send_video_mode": "<b>أرسل الفيديو الآن:</b>\n\n<b>سيتم تصميمه وإضافة العبارة.</b>",
-    "waiting_for_photo": "<b>في انتظار الصورة:</b>\n\n<b>يرجى إرسال الصورة الآن.</b>",
-    "waiting_for_video": "<b>في انتظار الفيديو:</b>\n\n<b>يرجى إرسال الفيديو الآن.</b>",
+    "send_photo_mode": "<b>أرسل الصورة الآن:</b>\n\n<b>↺ سيتم تصميمها وإضافة العبارة.</b>",
+    "send_video_mode": "<b>أرسل الفيديو الآن:</b>\n\n<b>↺ سيتم تصميمه وإضافة العبارة.</b>",
+    "waiting_for_photo": "<b>في انتظار الصورة:</b>\n\n<b>↺ يرجى إرسال الصورة الآن.</b>",
+    "waiting_for_video": "<b>في انتظار الفيديو:</b>\n\n<b>↺ يرجى إرسال الفيديو الآن.</b>",
     "welcome": (
         "<b>بوابة عالم الأحمر</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
         "<b>مرحباً بك في R W | Bot</b>\n"
         "<b>النظام المتكامل لإدارة قنوات تيليجرام باحترافية.</b>\n\n"
         "<b>ماذا يمكن لهذا البوت فعله؟</b>\n\n"
-        "<b>تصميم المحتوى:</b> <b>صور وفيديوهات مع عبارات.</b>\n"
-        "<b>التوليد النصي:</b> <b>إعلانات وحقوق صوتية.</b>\n"
-        "<b>حماية القنوات:</b> <b>إدارة الاشتراك الإجباري.</b>\n"
-        "<b>دردشة مباشرة:</b> <b>مع الذكاء الاصطناعي.</b>\n\n"
-        "<b>اضغط على زر لوحة التحكم للبدء.</b>\n\n"
+        "<b>↺ تصميم المحتوى:</b> <b>صور وفيديوهات مع عبارات.</b>\n"
+        "<b>↺ التوليد النصي:</b> <b>إعلانات وحقوق صوتية.</b>\n"
+        "<b>↺ حماية القنوات:</b> <b>إدارة الاشتراك الإجباري.</b>\n"
+        "<b>↺ دردشة مباشرة:</b> <b>مع الذكاء الاصطناعي.</b>\n\n"
+        "<b>↺ اضغط على زر لوحة التحكم للبدء.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     ),
     "admin_panel": (
         "<b>لوحة المطور</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
-        "<b>مرحباً بك أيها المالك.</b>\n"
-        "<b>من هنا يمكنك التحكم في إعدادات البوت بالكامل.</b>\n\n"
-        "<b>الإحصائيات:</b> <b>لمعرفة أرقام البوت.</b>\n"
-        "<b>قنوات الاشتراك:</b> <b>لإدارة القنوات.</b>\n"
-        "<b>إعدادات الوسائط:</b> <b>لتغيير كليشات البوت.</b>\n"
-        "<b>الإذاعة:</b> <b>لإرسال رسالة للجميع.</b>\n\n"
+        "<b>مرحباً بك أيها المالك.</b>\n\n"
+        "<b>↺ الإحصائيات:</b> <b>لمعرفة أرقام البوت.</b>\n"
+        "<b>↺ قنوات الاشتراك:</b> <b>لإدارة القنوات.</b>\n"
+        "<b>↺ إعدادات الوسائط:</b> <b>لتغيير كليشات البوت.</b>\n"
+        "<b>↺ الإذاعة:</b> <b>لإرسال رسالة للجميع.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     )
 }
 
 # ==========================================
-# 4. دوال مساعدة
+# 4. دوال مساعدة (المنشن والحذف)
 # ==========================================
 def convert_to_jpg(image_bytes):
     try:
@@ -181,10 +179,9 @@ def safe_delete(chat_id, message_id):
     try: bot.delete_message(chat_id, message_id)
     except: pass
 
+# إصلاح المنشن ليعرض الاسم الحقيقي
 def get_mention(user):
     name = user.first_name
-    if user.username:
-        name = f"@{user.username}"
     return f"<a href='tg://user?id={user.id}'><b>{name}</b></a>"
 
 def send_panel(chat_id, text, markup, media_key=None):
@@ -324,7 +321,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط (حل الفوضى)
+# 8. إعدادات الوسائط (تم إصلاح الحذف)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -362,11 +359,12 @@ def media_upload_choice(call):
     text = f"<b>أرسل الـ{media_type} الآن</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>سيتم حفظ الوسائط وتعيينها.</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_media_settings"))
     
+    # هنا نحذف الرسالة السابقة ونرسل رسالة الطلب الجديدة
     safe_delete(call.message.chat.id, call.message.message_id)
     msg = bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
-    bot.register_next_step_handler(msg, save_media, key, media_type)
+    bot.register_next_step_handler(msg, save_media, key, media_type, msg.message_id)
 
-def save_media(message, key, media_type):
+def save_media(message, key, media_type, msg_id_to_delete):
     if message.from_user.id != ADMIN_ID: return
     if message.text and message.text == "إلغاء": return
     
@@ -380,11 +378,14 @@ def save_media(message, key, media_type):
     config_data["media"][key] = file_id
     save_config(config_data)
     
+    # حذف رسالة المستخدم ورسالة الطلب السابقة
     safe_delete(message.chat.id, message.message_id)
+    safe_delete(message.chat.id, msg_id_to_delete)
+    
     bot.send_message(message.chat.id, "<b>تم حفظ الوسائط بنجاح.</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_media_settings")), parse_mode='HTML')
 
 # ==========================================
-# 9. إدارة الاشتراك الإجباري
+# 9. إدارة الاشتراك الإجباري (تم إصلاح الحذف)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
 def admin_channels(call):
@@ -441,13 +442,13 @@ def confirm_del(call):
 @bot.callback_query_handler(func=lambda call: call.data == "add_ch")
 def add_ch(call):
     if call.from_user.id != ADMIN_ID: return
-    text = "<b>إضافة قناة جديدة</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>أرسل يوزر القناة الآن (مثال: @MyChannel).</b>"
+    text = "<b>إضافة قناة جديدة</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>أرسل يوزر القناة الآن (مثلاً: @MyChannel).</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_channels"))
     safe_delete(call.message.chat.id, call.message.message_id)
     msg = bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
-    bot.register_next_step_handler(msg, save_new_channel)
+    bot.register_next_step_handler(msg, save_new_channel, msg.message_id)
 
-def save_new_channel(message):
+def save_new_channel(message, msg_id_to_delete):
     if message.from_user.id != ADMIN_ID: return
     if message.text and message.text == "إلغاء": return
     channel = message.text.strip()
@@ -456,6 +457,7 @@ def save_new_channel(message):
     config_data["channels"].append(channel)
     save_config(config_data)
     safe_delete(message.chat.id, message.message_id)
+    safe_delete(message.chat.id, msg_id_to_delete)
     bot.send_message(message.chat.id, f"<b>تم إضافة القناة:</b> {channel}", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_channels")), parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data == "admin_broadcast")
@@ -465,9 +467,9 @@ def admin_broadcast(call):
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_panel"))
     safe_delete(call.message.chat.id, call.message.message_id)
     msg = bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
-    bot.register_next_step_handler(msg, do_broadcast)
+    bot.register_next_step_handler(msg, do_broadcast, msg.message_id)
 
-def do_broadcast(message):
+def do_broadcast(message, msg_id_to_delete):
     if message.from_user.id != ADMIN_ID: return
     if message.text and message.text == "إلغاء": return
     success, failed = 0, 0
@@ -478,6 +480,8 @@ def do_broadcast(message):
             success += 1
             time.sleep(0.1)
         except: failed += 1
+    safe_delete(message.chat.id, message.message_id)
+    safe_delete(message.chat.id, msg_id_to_delete)
     bot.edit_message_text(f"<b>تم الإرسال لـ {success} مستخدم.\nفشل لـ {failed}.</b>", chat_id=message.chat.id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_panel")), parse_mode='HTML')
 
 # ==========================================
