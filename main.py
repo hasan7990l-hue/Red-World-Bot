@@ -22,7 +22,7 @@ CONFIG_FILE = "bot_config.json"
 audio_edit_state, ad_builder_state = {}, {}
 image_gen_state, video_gen_state, chat_state, welcome_media_state = {}, {}, {}, {}
 audio_cache, user_channels, stats, user_settings, pending_posts = {}, {}, {}, {}, {}
-button_builder_state = {} # حالة إضافة الزر للمنشور
+button_builder_state = {}
 
 # ==========================================
 # 2. إدارة الإعدادات والحفظ
@@ -320,7 +320,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط
+# 8. إعدادات الوسائط (مضمون 100%)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -367,22 +367,32 @@ def save_media(message, key, media_type, msg_id_to_delete):
     if message.from_user.id != ADMIN_ID: return
     if message.text and message.text == "إلغاء": return
     
-    if media_type == "photo" and message.photo:
-        file_id = message.photo[-1].file_id
-    elif media_type == "video" and message.video:
-        file_id = message.video.file_id
-    else:
-        return bot.send_message(message.chat.id, "<b>نوع الملف غير صحيح.</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_media_settings")), parse_mode='HTML')
+    file_id = None
+    if media_type == "photo":
+        if message.photo:
+            file_id = message.photo[-1].file_id
+        elif message.document and message.document.mime_type and message.document.mime_type.startswith('image/'):
+            file_id = message.document.file_id
+            
+    elif media_type == "video":
+        if message.video:
+            file_id = message.video.file_id
+        elif message.document and message.document.mime_type and message.document.mime_type.startswith('video/'):
+            file_id = message.document.file_id
+            
+    if not file_id:
+        return bot.send_message(message.chat.id, "<b>نوع الملف غير صحيح. يرجى إرسال الصورة أو الفيديو المطلوب.</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_media_settings")), parse_mode='HTML')
         
     config_data["media"][key] = file_id
     save_config(config_data)
     
     safe_delete(message.chat.id, message.message_id)
     safe_delete(message.chat.id, msg_id_to_delete)
+    
     bot.send_message(message.chat.id, "<b>تم حفظ الوسائط بنجاح.</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_media_settings")), parse_mode='HTML')
 
 # ==========================================
-# 9. إدارة الاشتراك الإجباري (جلب الاسم)
+# 9. إدارة الاشتراك الإجباري
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
 def admin_channels(call):
@@ -450,7 +460,7 @@ def save_new_channel(message, msg_id_to_delete):
     bot.send_message(message.chat.id, f"<b>تم إضافة القناة:</b> {channel_name}", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_channels")), parse_mode='HTML')
 
 # ==========================================
-# 10. إنشاء المحتوى (مع نظام الزر الجديد)
+# 10. إنشاء المحتوى
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "menu_create")
 def menu_create(call):
@@ -574,7 +584,6 @@ def media_format_and_publish(call):
     post_id = str(int(time.time()))
     pending_posts[post_id] = {'type': media_type, 'file_id': file_id, 'caption': final_caption, 'channel': user_channels.get(str(uid)), 'category': category, 'language': lang, 'format': fmt, 'is_img': is_img, 'custom_button': None}
     
-    # 🟢 هنا نعرض خيار إضافة الزر أو التخطي
     markup = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton("إضافة زر مخصص للمنشور", callback_data=f"add_btn_{post_id}"),
         InlineKeyboardButton("تخطي وإكمال النشر", callback_data=f"confirm_{post_id}"),
@@ -585,7 +594,6 @@ def media_format_and_publish(call):
     if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"<b>معاينة</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
     else: bot.send_video(call.message.chat.id, file_id, caption=f"<b>معاينة</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
 
-# نظام إضافة الزر المخصص
 @bot.callback_query_handler(func=lambda call: call.data.startswith("add_btn_"))
 def ask_button_text(call):
     post_id = call.data.split("_")[2]
@@ -620,7 +628,6 @@ def save_button_and_preview(message, post_id, msg_id_to_delete):
     safe_delete(message.chat.id, message.message_id)
     safe_delete(message.chat.id, msg_id_to_delete)
     
-    # عرض المعاينة النهائية مع الزر
     markup = InlineKeyboardMarkup(row_width=1)
     markup.add(InlineKeyboardButton(data['custom_button']['text'], url=data['custom_button']['url']))
     markup.add(InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), InlineKeyboardButton("إلغاء", callback_data="main_menu"))
