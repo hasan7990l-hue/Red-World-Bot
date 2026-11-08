@@ -55,29 +55,78 @@ def get_default_settings():
     return {"status": "ON", "category": "فلسفي", "language": "عربي", "hashtags": "#RedWorld #عالم_الأحمر"}
 
 # ==========================================
-# 3. الكليشات (نصوص طويلة ومقسمة بأسطر لتظهر كاملة)
+# 3. الكليشات الفخمة (كلها بخط عريض ومرتبة)
 # ==========================================
 MENU_TEXTS = {
-    "main_menu": "⚙️ لوحة التحكم الرئيسية ⚙️\n━━━━━━━━━━━━━━━━━━━━\n\nمرحباً بك في مركز إدارة عالم الأحمر.\nهنا تجد كل ما تحتاجه لإدارة محتواك وقناتك باحترافية تامة.\n\n📌 الأقسام المتاحة:\n\n🎨 إنشاء محتوى:\nلتصميم منشوراتك (صور وفيديو).\n\n🛠️ التوليد النصي:\nلإنشاء إعلاناتك وحقوقك الصوتية.\n\n💬 دردشة Gaski:\nللتحدث مع الذكاء الاصطناعي.\n\n📊 السورس:\nلمعرفة معلومات النظام.\n\n🚪 مغادرة القناة:\nلفك ارتباط البوت بقناتك.",
-    
-    "menu_create": "🎨 استوديو المحتوى 🎨\n━━━━━━━━━━━━━━━━━━━━\n\nمن هنا يمكنك إنشاء منشوراتك بسهولة.\nاختر إرسال صورة أو فيديو، وسيقوم الذكاء الاصطناعي بتوليد عبارة مناسبة لك بناءً على الفئة التي تختارها.\n\n🖼️ إرسال صورة:\nلتصميم صورة مع عبارة.\n\n🎬 إرسال فيديو:\nلتصميم فيديو مع عبارة.",
-    
-    "menu_tools": "🛠️ أدوات النشر 🛠️\n━━━━━━━━━━━━━━━━━━━━\n\nهنا تجد أدوات التوليد النصي، وبناء الإعلانات، وختم الحقوق الصوتية.\n\n📢 إعلان ترويجي:\nلبناء إعلان احترافي لمجموعتك.\n\n🎵 حقوق النشر:\nلإضافة غلاف صوتي.",
-    
-    "start_chat_gaski": "💬 دردشة Gaski 💬\n━━━━━━━━━━━━━━━━━━━━\n\nأهلاً بك في العقل المدبر.\nتحدث معي بحرية، اسألني أي شيء، وسأجيبك فوراً.",
-    
-    "start_ad_builder": "📢 بروتوكول الإعلان 📢\n━━━━━━━━━━━━━━━━━━━━\n\nسنقوم ببناء إعلان احترافي لمجموعتك خطوة بخطوة.",
-    
-    "start_audio_edit": "🎵 ختم الحقوق 🎵\n━━━━━━━━━━━━━━━━━━━━\n\nأرسل صورة الغلاف أولاً، ثم أرسل ملف الصوت MP3.",
-    
-    "send_photo_mode": "🖼️ أرسل الصورة الآن:\n\nسيتم تصميمها وإضافة العبارة.",
-    "send_video_mode": "🎬 أرسل الفيديو الآن:\n\nسيتم تصميمه وإضافة العبارة.",
-    "waiting_for_photo": "🖼️ في انتظار الصورة:\n\nيرجى إرسال الصورة الآن.",
-    "waiting_for_video": "🎬 في انتظار الفيديو:\n\nيرجى إرسال الفيديو الآن.",
-    
-    "welcome": "🟥 بوابة عالم الأحمر 🟥\n━━━━━━━━━━━━━━━━━━━━\n\nمرحباً بك في R W | Bot\nالنظام المتكامل لإدارة قنوات تيليجرام باحترافية.\n\n⚡ ماذا يمكن لهذا البوت فعله؟\n\n🎨 تصميم المحتوى:\nصور وفيديوهات مع عبارات.\n\n🛠️ التوليد النصي:\nإعلانات وحقوق صوتية.\n\n🛡️ حماية القنوات:\nإدارة الاشتراك الإجباري.\n\n💬 دردشة مباشرة:\nمع الذكاء الاصطناعي.\n\nاضغط على زر لوحة التحكم للبدء.",
-    
-    "admin_panel": "🛡️ لوحة المطور 🛡️\n━━━━━━━━━━━━━━━━━━━━\n\nمرحباً بك أيها المالك.\nمن هنا يمكنك التحكم في إعدادات البوت بالكامل.\n\n📊 الإحصائيات:\nلمعرفة أرقام البوت.\n\n📡 قنوات الاشتراك:\nلإدارة القنوات.\n\n🖼️ إعدادات الوسائط:\nلتغيير كليشات البوت.\n\n📢 الإذاعة:\nلإرسال رسالة للجميع."
+    "main_menu": (
+        "<b>╭─━━━━━━━『 ⚙️ لوحة التحكم الرئيسية ⚙️ 』━━━━━━━─╮</b>\n\n"
+        "<b>مرحباً بك في مركز إدارة عالم الأحمر.</b>\n"
+        "<b>هنا تجد كل ما تحتاجه لإدارة محتواك وقناتك باحترافية تامة.</b>\n\n"
+        "<b>📌 الأقسام المتاحة:</b>\n\n"
+        "<b>├ 🎨 إنشاء محتوى:</b> <b>لتصميم منشوراتك (صور وفيديو).</b>\n"
+        "<b>├ 🛠️ التوليد النصي:</b> <b>لإنشاء إعلاناتك وحقوقك الصوتية.</b>\n"
+        "<b>├ 💬 دردشة Gaski:</b> <b>للتحدث مع الذكاء الاصطناعي.</b>\n"
+        "<b>├ 📊 السورس:</b> <b>لمعرفة معلومات النظام.</b>\n"
+        "<b>└ 🚪 مغادرة القناة:</b> <b>لفك ارتباط البوت بقناتك.</b>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "menu_create": (
+        "<b>╭─━━━━━━━『 🎨 استوديو المحتوى 』━━━━━━━─╮</b>\n\n"
+        "<b>من هنا يمكنك إنشاء منشوراتك بسهولة.</b>\n"
+        "<b>اختر إرسال صورة أو فيديو، وسيقوم الذكاء الاصطناعي بتوليد عبارة مناسبة لك بناءً على الفئة التي تختارها.</b>\n\n"
+        "<b>🖼️ إرسال صورة:</b> <b>لتصميم صورة مع عبارة.</b>\n"
+        "<b>🎬 إرسال فيديو:</b> <b>لتصميم فيديو مع عبارة.</b>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "menu_tools": (
+        "<b>╭─━━━━━━━『 🛠️ أدوات النشر 』━━━━━━━─╮</b>\n\n"
+        "<b>هنا تجد أدوات التوليد النصي، وبناء الإعلانات، وختم الحقوق الصوتية.</b>\n\n"
+        "<b>📢 إعلان ترويجي:</b> <b>لبناء إعلان احترافي لمجموعتك.</b>\n"
+        "<b>🎵 حقوق النشر:</b> <b>لإضافة غلاف صوتي.</b>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "start_chat_gaski": (
+        "<b>╭─━━━━━━━『 💬 دردشة Gaski 』━━━━━━━─╮</b>\n\n"
+        "<b>أهلاً بك في العقل المدبر.</b>\n"
+        "<b>تحدث معي بحرية، اسألني أي شيء، وسأجيبك فوراً.</b>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "start_ad_builder": (
+        "<b>╭─━━━━━━━『 📢 بروتوكول الإعلان 』━━━━━━━─╮</b>\n\n"
+        "<b>سنقوم ببناء إعلان احترافي لمجموعتك خطوة بخطوة.</b>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "start_audio_edit": (
+        "<b>╭─━━━━━━━『 🎵 ختم الحقوق 』━━━━━━━─╮</b>\n\n"
+        "<b>أرسل صورة الغلاف أولاً، ثم أرسل ملف الصوت MP3.</b>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "send_photo_mode": "<b>🖼️ أرسل الصورة الآن:</b>\n\n<b>سيتم تصميمها وإضافة العبارة.</b>",
+    "send_video_mode": "<b>🎬 أرسل الفيديو الآن:</b>\n\n<b>سيتم تصميمه وإضافة العبارة.</b>",
+    "waiting_for_photo": "<b>🖼️ في انتظار الصورة:</b>\n\n<b>يرجى إرسال الصورة الآن.</b>",
+    "waiting_for_video": "<b>🎬 في انتظار الفيديو:</b>\n\n<b>يرجى إرسال الفيديو الآن.</b>",
+    "welcome": (
+        "<b>╭─━━━━━━━『 🟥 بوابة عالم الأحمر 🟥 』━━━━━━━─╮</b>\n\n"
+        "<b>مرحباً بك في R W | Bot</b>\n"
+        "<b>النظام المتكامل لإدارة قنوات تيليجرام باحترافية.</b>\n\n"
+        "<b>⚡ ماذا يمكن لهذا البوت فعله؟</b>\n\n"
+        "<b>├ 🎨 تصميم المحتوى:</b> <b>صور وفيديوهات مع عبارات.</b>\n"
+        "<b>├ 🛠️ التوليد النصي:</b> <b>إعلانات وحقوق صوتية.</b>\n"
+        "<b>├ 🛡️ حماية القنوات:</b> <b>إدارة الاشتراك الإجباري.</b>\n"
+        "<b>└ 💬 دردشة مباشرة:</b> <b>مع الذكاء الاصطناعي.</b>\n\n"
+        "<b>اضغط على زر لوحة التحكم للبدء.</b>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "admin_panel": (
+        "<b>╭─━━━━━━━『 🛡️ لوحة المطور 🛡️ 』━━━━━━━─╮</b>\n\n"
+        "<b>مرحباً بك أيها المالك.</b>\n"
+        "<b>من هنا يمكنك التحكم في إعدادات البوت بالكامل.</b>\n\n"
+        "<b>📊 الإحصائيات:</b> <b>لمعرفة أرقام البوت.</b>\n"
+        "<b>📡 قنوات الاشتراك:</b> <b>لإدارة القنوات.</b>\n"
+        "<b>🖼️ إعدادات الوسائط:</b> <b>لتغيير كليشات البوت.</b>\n"
+        "<b>📢 الإذاعة:</b> <b>لإرسال رسالة للجميع.</b>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    )
 }
 
 # ==========================================
@@ -124,7 +173,6 @@ def safe_delete(chat_id, message_id):
     try: bot.delete_message(chat_id, message_id)
     except: pass
 
-# دالة إرسال الكليشة (صورة + نص في رسالة واحدة)
 def send_panel(chat_id, text, markup, media_key=None):
     file_id = config_data.get("media", {}).get(media_key) if media_key else None
     if file_id:
@@ -155,7 +203,7 @@ def send_welcome(message):
         for ch in config_data.get("channels", []):
             markup.add(InlineKeyboardButton(f"اشترك في {ch}", url=f"https://t.me/{ch.replace('@', '')}"))
         markup.add(InlineKeyboardButton("✅ تحقق من الاشتراك", callback_data="check_sub"))
-        return bot.send_message(message.chat.id, "⛔ بوابة مغلقة\n\nعذراً، يجب عليك الاشتراك في القنوات التالية أولاً لتتمكن من استخدام البوت.", reply_markup=markup, parse_mode='HTML')
+        return bot.send_message(message.chat.id, "<b>⛔ بوابة مغلقة</b>\n\n<b>عذراً، يجب عليك الاشتراك في القنوات التالية أولاً لتتمكن من استخدام البوت.</b>", reply_markup=markup, parse_mode='HTML')
     
     if user_id not in user_settings: user_settings[user_id] = get_default_settings()
     
@@ -184,7 +232,7 @@ def verify_channel(call):
     channel_id = user_channels.get(str(call.from_user.id))
     if not channel_id:
         safe_delete(call.message.chat.id, call.message.message_id)
-        msg = bot.send_message(call.message.chat.id, "أرسل معرف القناة:", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="main_menu")), parse_mode='HTML')
+        msg = bot.send_message(call.message.chat.id, "<b>أرسل معرف القناة:</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="main_menu")), parse_mode='HTML')
         bot.register_next_step_handler(msg, manual_verify, call.from_user.id)
     else: 
         perform_verification(call.message.chat.id, call.from_user.id, channel_id, call.message.message_id)
@@ -198,7 +246,7 @@ def manual_verify(message, user_id):
     perform_verification(message.chat.id, user_id, channel_input, message.message_id)
 
 def perform_verification(chat_id, user_id, channel_id, msg_id_to_delete):
-    msg = bot.send_message(chat_id, "جاري الفحص...", parse_mode='HTML')
+    msg = bot.send_message(chat_id, "<b>جاري الفحص...</b>", parse_mode='HTML')
     try:
         chat_info = bot.get_chat(channel_id)
         bot_member = bot.get_chat_member(channel_id, bot.get_me().id)
@@ -208,9 +256,9 @@ def perform_verification(chat_id, user_id, channel_id, msg_id_to_delete):
             markup = get_main_panel(user_id)
             send_panel(chat_id, MENU_TEXTS["main_menu"], markup, media_key="welcome")
         else:
-            bot.edit_message_text("فشل: البوت ليس مشرفاً أو لا يملك صلاحية النشر.", chat_id=chat_id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu")), parse_mode='HTML')
+            bot.edit_message_text("<b>فشل:</b> البوت ليس مشرفاً أو لا يملك صلاحية النشر.", chat_id=chat_id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu")), parse_mode='HTML')
     except Exception as e:
-        bot.edit_message_text(f"خطأ: {e}", chat_id=chat_id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu")), parse_mode='HTML')
+        bot.edit_message_text(f"<b>خطأ:</b> {e}", chat_id=chat_id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu")), parse_mode='HTML')
 
 # ==========================================
 # 6. لوحة التحكم الرئيسية
@@ -255,17 +303,17 @@ def admin_stats(call):
     total_users = len(user_settings)
     posts = stats.get("published_count", 0)
     channels_count = len(config_data.get("channels", []))
-    text = f"📊 إحصائيات البوت\n━━━━━━━━━━━━━━━━━━━━\n\n- إجمالي المستخدمين: {total_users}\n- المنشورات: {posts}\n- قنوات الاشتراك: {channels_count}\n- الحالة: ✅ يعمل بكفاءة"
+    text = f"<b>📊 إحصائيات البوت</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>- إجمالي المستخدمين:</b> <code>{total_users}</code>\n<b>- المنشورات:</b> <code>{posts}</code>\n<b>- قنوات الاشتراك:</b> <code>{channels_count}</code>\n<b>- الحالة:</b> <b>✅ يعمل بكفاءة</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel"))
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط
+# 8. إعدادات الوسائط (تم إصلاح الفوضى)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
     if call.from_user.id != ADMIN_ID: return
-    text = "🖼️ إعدادات الوسائط\n━━━━━━━━━━━━━━━━━━━━\n\nاختر القسم الذي تريد تعيين صورة أو فيديو له:"
+    text = "<b>🖼️ إعدادات الوسائط</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر القسم الذي تريد تعيين صورة أو فيديو له:</b>"
     markup = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton("كليشة الترحيب", callback_data="media_set_welcome"),
         InlineKeyboardButton("كليشة إنشاء محتوى", callback_data="media_set_create"),
@@ -280,7 +328,7 @@ def admin_media_settings(call):
 def media_set_choice(call):
     if call.from_user.id != ADMIN_ID: return
     key = call.data.replace("media_set_", "")
-    text = f"🖼️ تعيين وسائط لـ {key}\n━━━━━━━━━━━━━━━━━━━━\n\nهل تريد تعيين صورة أم فيديو؟"
+    text = f"<b>🖼️ تعيين وسائط لـ {key}</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>هل تريد تعيين صورة أم فيديو؟</b>"
     markup = InlineKeyboardMarkup(row_width=2).add(
         InlineKeyboardButton("📷 صورة", callback_data=f"media_upload_{key}_photo"),
         InlineKeyboardButton("🎬 فيديو", callback_data=f"media_upload_{key}_video"),
@@ -295,8 +343,9 @@ def media_upload_choice(call):
     key = parts[2]
     media_type = parts[3]
     
-    text = f"📤 أرسل الـ{media_type} الآن\n━━━━━━━━━━━━━━━━━━━━\n\nسيتم حفظ الوسائط وتعيينها."
+    text = f"<b>📤 أرسل الـ{media_type} الآن</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>سيتم حفظ الوسائط وتعيينها.</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 إلغاء والرجوع", callback_data="admin_media_settings"))
+    
     safe_delete(call.message.chat.id, call.message.message_id)
     msg = bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
     bot.register_next_step_handler(msg, save_media, key, media_type)
@@ -310,13 +359,13 @@ def save_media(message, key, media_type):
     elif media_type == "video" and message.video:
         file_id = message.video.file_id
     else:
-        return bot.send_message(message.chat.id, "❌ نوع الملف غير صحيح. يرجى إرسال الصورة أو الفيديو المطلوب.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_media_settings")))
+        return bot.send_message(message.chat.id, "<b>❌ نوع الملف غير صحيح. يرجى إرسال الصورة أو الفيديو المطلوب.</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_media_settings")), parse_mode='HTML')
         
     config_data["media"][key] = file_id
     save_config(config_data)
     
     safe_delete(message.chat.id, message.message_id)
-    bot.send_message(message.chat.id, "✅ تم حفظ الوسائط بنجاح.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_media_settings")))
+    bot.send_message(message.chat.id, "<b>✅ تم حفظ الوسائط بنجاح.</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_media_settings")), parse_mode='HTML')
 
 # ==========================================
 # 9. إدارة الاشتراك الإجباري
@@ -324,7 +373,7 @@ def save_media(message, key, media_type):
 @bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
 def admin_channels(call):
     if call.from_user.id != ADMIN_ID: return
-    text = "📡 إدارة قنوات الاشتراك الإجباري\n━━━━━━━━━━━━━━━━━━━━\n\nاختر القناة للإدارة أو أضف قناة جديدة."
+    text = "<b>📡 إدارة قنوات الاشتراك الإجباري</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر القناة للإدارة أو أضف قناة جديدة.</b>"
     markup = InlineKeyboardMarkup(row_width=1)
     channels = config_data.get("channels", [])
     for i, ch in enumerate(channels):
@@ -341,7 +390,7 @@ def manage_channel(call):
     if idx >= len(channels): return
     ch = channels[idx]
     
-    text = f"📢 إدارة القناة: {ch}\n━━━━━━━━━━━━━━━━━━━━\n\nاختر الإجراء المطلوب:"
+    text = f"<b>📢 إدارة القناة: {ch}</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر الإجراء المطلوب:</b>"
     markup = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton("🔗 دخول للقناة", url=f"https://t.me/{ch.replace('@', '')}"),
         InlineKeyboardButton("❌ حذف القناة", callback_data=f"del_ch_{idx}"),
@@ -357,7 +406,7 @@ def del_ch(call):
     if idx >= len(channels): return
     ch = channels[idx]
     
-    text = f"⚠️ تأكيد الحذف\n━━━━━━━━━━━━━━━━━━━━\n\nهل أنت متأكد من حذف القناة {ch}؟"
+    text = f"<b>⚠️ تأكيد الحذف</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>هل أنت متأكد من حذف القناة {ch}؟</b>"
     markup = InlineKeyboardMarkup(row_width=2).add(
         InlineKeyboardButton("✅ نعم، احذف", callback_data=f"confirm_del_{idx}"),
         InlineKeyboardButton("❌ لا، إلغاء", callback_data="admin_channels")
@@ -376,7 +425,7 @@ def confirm_del(call):
 @bot.callback_query_handler(func=lambda call: call.data == "add_ch")
 def add_ch(call):
     if call.from_user.id != ADMIN_ID: return
-    text = "➕ إضافة قناة جديدة\n━━━━━━━━━━━━━━━━━━━━\n\nأرسل يوزر القناة الآن (مثال: @MyChannel)."
+    text = "<b>➕ إضافة قناة جديدة</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>أرسل يوزر القناة الآن (مثال: @MyChannel).</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 إلغاء والرجوع", callback_data="admin_channels"))
     safe_delete(call.message.chat.id, call.message.message_id)
     msg = bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
@@ -391,12 +440,12 @@ def save_new_channel(message):
     config_data["channels"].append(channel)
     save_config(config_data)
     safe_delete(message.chat.id, message.message_id)
-    bot.send_message(message.chat.id, f"✅ تم إضافة القناة: {channel}", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_channels")), parse_mode='HTML')
+    bot.send_message(message.chat.id, f"<b>✅ تم إضافة القناة:</b> {channel}", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_channels")), parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data == "admin_broadcast")
 def admin_broadcast(call):
     if call.from_user.id != ADMIN_ID: return
-    text = "📢 الإذاعة\n━━━━━━━━━━━━━━━━━━━━\n\nأرسل الرسالة التي تريد إذاعتها لجميع المستخدمين."
+    text = "<b>📢 الإذاعة</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>أرسل الرسالة التي تريد إذاعتها لجميع المستخدمين.</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 إلغاء والرجوع", callback_data="admin_panel"))
     safe_delete(call.message.chat.id, call.message.message_id)
     msg = bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
@@ -406,14 +455,14 @@ def do_broadcast(message):
     if message.from_user.id != ADMIN_ID: return
     if message.text and message.text == "إلغاء": return
     success, failed = 0, 0
-    msg = bot.send_message(message.chat.id, "⏳ جاري الإذاعة...", parse_mode='HTML')
+    msg = bot.send_message(message.chat.id, "<b>⏳ جاري الإذاعة...</b>", parse_mode='HTML')
     for uid in user_settings.keys():
         try:
-            bot.send_message(uid, f"📢 إعلان من المطور:\n\n{message.text}", parse_mode='HTML')
+            bot.send_message(uid, f"<b>📢 إعلان من المطور:</b>\n\n{message.text}", parse_mode='HTML')
             success += 1
             time.sleep(0.1)
         except: failed += 1
-    bot.edit_message_text(f"✅ تم الإرسال لـ {success} مستخدم.\n❌ فشل لـ {failed}.", chat_id=message.chat.id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")), parse_mode='HTML')
+    bot.edit_message_text(f"<b>✅ تم الإرسال لـ {success} مستخدم.\n❌ فشل لـ {failed}.</b>", chat_id=message.chat.id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_panel")), parse_mode='HTML')
 
 # ==========================================
 # 10. أزرار البوت والفئات
@@ -477,7 +526,7 @@ def handle_all_photos(message):
             InlineKeyboardButton("صمت", callback_data="img_cat_صمت"),
             InlineKeyboardButton("🔙 رجوع", callback_data="menu_create")
         )
-        bot.send_message(message.chat.id, "اختر الفئة:", reply_markup=markup, parse_mode='HTML')
+        bot.send_message(message.chat.id, "<b>اختر الفئة:</b>", reply_markup=markup, parse_mode='HTML')
 
 @bot.message_handler(content_types=['video'])
 def handle_video_new(message):
@@ -492,7 +541,7 @@ def handle_video_new(message):
             InlineKeyboardButton("حب", callback_data="vid_cat_حب"), 
             InlineKeyboardButton("اقتباس", callback_data="vid_cat_اقتباس"),
             InlineKeyboardButton("🔙 رجوع", callback_data="menu_create"))
-        bot.send_message(message.chat.id, "اختر الفئة:", reply_markup=markup, parse_mode='HTML')
+        bot.send_message(message.chat.id, "<b>اختر الفئة:</b>", reply_markup=markup, parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("img_cat_") or call.data.startswith("vid_cat_"))
 def media_category(call):
@@ -506,7 +555,7 @@ def media_category(call):
         InlineKeyboardButton("عربي فقط", callback_data=f"{prefix}_lang_عربي"),
         InlineKeyboardButton("مختلط (عربي + إنجليزي)", callback_data=f"{prefix}_lang_مختلط"),
         InlineKeyboardButton("🔙 إلغاء", callback_data="main_menu"))
-    text = f"⟨ الفئة: {cat} ⟩\n━━━━━━━━━━━━━━━━━━━━\n\nاختر لغة العبارة."
+    text = f"<b>⟨ الفئة: {cat} ⟩</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر لغة العبارة.</b>"
     send_or_edit(call, text, markup)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("img_lang_") or call.data.startswith("vid_lang_"))
@@ -521,7 +570,7 @@ def media_language(call):
         InlineKeyboardButton("خط مائل", callback_data=f"{prefix}_fmt_italic"),
         InlineKeyboardButton("خط غامض", callback_data=f"{prefix}_fmt_bold"),
         InlineKeyboardButton("🔙 إلغاء", callback_data="main_menu"))
-    text = f"⟨ اللغة: {lang_choice} ⟩\n━━━━━━━━━━━━━━━━━━━━\n\nاختر تنسيق النص."
+    text = f"<b>⟨ اللغة: {lang_choice} ⟩</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر تنسيق النص.</b>"
     send_or_edit(call, text, markup)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("img_fmt_") or call.data.startswith("vid_fmt_"))
@@ -534,7 +583,7 @@ def media_format_and_publish(call):
     else: return bot.answer_callback_query(call.id, "انتهت الجلسة.", show_alert=True)
     
     safe_delete(call.message.chat.id, call.message.message_id)
-    msg = bot.send_message(call.message.chat.id, "⏳ جاري توليد العبارة...", parse_mode='HTML')
+    msg = bot.send_message(call.message.chat.id, "<b>⏳ جاري توليد العبارة...</b>", parse_mode='HTML')
     
     lang_instr = "جملة عربية قصيرة ثم ترجمتها الإنجليزية في السطر التالي" if lang == "مختلط" else "باللغة العربية الفصحى"
     prompt = f"اكتب عبارة قصيرة جداً من سطر واحد بأسلوب {category} ({lang_instr}). بدون إيموجي."
@@ -544,14 +593,14 @@ def media_format_and_publish(call):
     except: raw_text = "عبارة تجريبية."
     final_text = f"<i>{raw_text}</i>" if fmt == "italic" else f"<b>{raw_text}</b>"
     settings = user_settings.get(uid, get_default_settings())
-    final_caption = f"{final_text}\n\n{settings.get('hashtags', '')}"
+    final_caption = f"<b>{final_text}</b>\n\n<b>{settings.get('hashtags', '')}</b>"
     post_id = str(int(time.time()))
     pending_posts[post_id] = {'type': media_type, 'file_id': file_id, 'caption': final_caption, 'channel': user_channels.get(str(uid)), 'category': category, 'language': lang, 'format': fmt, 'is_img': is_img}
     markup = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_{post_id}"), InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), InlineKeyboardButton("إلغاء", callback_data="main_menu"))
     
     safe_delete(call.message.chat.id, msg.message_id)
-    if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"⟨ معاينة ⟩\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
-    else: bot.send_video(call.message.chat.id, file_id, caption=f"⟨ معاينة ⟩\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+    if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+    else: bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
 def start_gaski_chat(call):
@@ -562,11 +611,11 @@ def start_gaski_chat(call):
 @bot.message_handler(func=lambda m: m.from_user.id in chat_state, content_types=['text'])
 def handle_chat_message(message):
     if message.text.startswith('/'): return
-    msg = bot.reply_to(message, "يفكر...", parse_mode='HTML')
+    msg = bot.reply_to(message, "<b>يفكر...</b>", parse_mode='HTML')
     try:
         res = client.chat.completions.create(messages=[{"role": "user", "content": message.text}], model=GROQ_MODEL, max_tokens=500)
         bot.edit_message_text(res.choices[0].message.content, chat_id=message.chat.id, message_id=msg.message_id)
-    except Exception as e: bot.edit_message_text(f"خطأ: {e}", chat_id=message.chat.id, message_id=msg.message_id)
+    except Exception as e: bot.edit_message_text(f"<b>خطأ: {e}</b>", chat_id=message.chat.id, message_id=msg.message_id, parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data == "start_audio_edit")
 def start_audio_edit(call):
@@ -580,18 +629,18 @@ def handle_audio(message):
     safe_delete(message.chat.id, message.message_id)
     if uid in audio_edit_state and audio_edit_state[uid]['step'] == 'waiting_for_audio':
         file_id = message.audio.file_id if message.content_type == 'audio' else (message.document.file_id if message.document.mime_type == 'audio/mpeg' else None)
-        if not file_id: return bot.reply_to(message, "أرسل MP3.")
+        if not file_id: return bot.reply_to(message, "<b>أرسل MP3.</b>", parse_mode='HTML')
         try:
             audio_data = bot.download_file(bot.get_file(file_id).file_path)
             cover_data = audio_edit_state[uid].get('cover_data')
-            if not cover_data: return bot.reply_to(message, "لم يتم العثور على الغلاف.")
+            if not cover_data: return bot.reply_to(message, "<b>لم يتم العثور على الغلاف.</b>", parse_mode='HTML')
             rebuilt, cover_jpg = rebuild_audio_with_cover(audio_data, cover_data)
             audio_cache[uid] = {'data': rebuilt, 'cover': cover_jpg}
             markup = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("نشر في القناة", callback_data=f"publish_standalone_audio_{uid}"), InlineKeyboardButton("🔙 رجوع", callback_data="main_menu"))
             bot.send_audio(message.chat.id, io.BytesIO(rebuilt), title="Red World", performer="@Eror_7", thumb=cover_jpg if cover_jpg else None)
-            bot.send_message(message.chat.id, "⟨ جاهز للنشر ⟩", reply_markup=markup, parse_mode='HTML')
+            bot.send_message(message.chat.id, "<b>⟨ جاهز للنشر ⟩</b>", reply_markup=markup, parse_mode='HTML')
             del audio_edit_state[uid]
-        except Exception as e: bot.send_message(message.chat.id, f"خطأ: {e}")
+        except Exception as e: bot.send_message(message.chat.id, f"<b>خطأ: {e}</b>", parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("publish_standalone_audio_"))
 def publish_standalone_audio(call):
@@ -622,13 +671,13 @@ def regenerate_caption(call):
     except: raw_text = "عبارة تجريبية."
     final_text = f"<i>{raw_text}</i>" if fmt == "italic" else f"<b>{raw_text}</b>"
     settings = user_settings.get(call.from_user.id, get_default_settings())
-    final_caption = f"{final_text}\n\n{settings.get('hashtags', '')}"
+    final_caption = f"<b>{final_text}</b>\n\n<b>{settings.get('hashtags', '')}</b>"
     data['caption'] = final_caption
     pending_posts[post_id] = data
     markup = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("تغيير العبارة", callback_data=f"regen_{post_id}"), InlineKeyboardButton("نشر الآن", callback_data=f"confirm_{post_id}"), InlineKeyboardButton("إلغاء", callback_data="main_menu"))
     safe_delete(call.message.chat.id, call.message.message_id)
-    if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"⟨ معاينة جديدة ⟩\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
-    else: bot.send_video(call.message.chat.id, file_id, caption=f"⟨ معاينة جديدة ⟩\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+    if media_type == 'photo': bot.send_photo(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة جديدة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
+    else: bot.send_video(call.message.chat.id, file_id, caption=f"<b>⟨ معاينة جديدة ⟩</b>\n\n{final_caption}", reply_markup=markup, parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def confirm_post(call):
@@ -650,13 +699,13 @@ def show_source(call):
     try: dev_name = bot.get_chat(ADMIN_ID).first_name or "Developer"
     except: dev_name = "Developer"
     ch_id = user_channels.get(str(call.from_user.id))
-    text = "[ SYSTEM INFO ]\n\n"
+    text = "<b>[ SYSTEM INFO ]</b>\n\n"
     if ch_id:
         try:
             ch = bot.get_chat(ch_id)
-            text += f"Channel: {ch.title}\nID: {ch.id}\n\n"
+            text += f"<b>Channel:</b> {ch.title}\n<b>ID:</b> <code>{ch.id}</code>\n\n"
         except: pass
-    text += f"Developer: {dev_name}\nBot: @{bot.get_me().username}"
+    text += f"<b>Developer:</b> {dev_name}\n<b>Bot:</b> @{bot.get_me().username}"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="main_menu"))
     send_or_edit(call, text, markup)
 
@@ -685,7 +734,7 @@ def ad_step_handler(message):
         data['step'] = 'waiting_group_type'
         safe_delete(message.chat.id, message.message_id)
         markup = InlineKeyboardMarkup(row_width=3).add(InlineKeyboardButton("تمبلر", callback_data="ad_type_تمبلر"), InlineKeyboardButton("فري", callback_data="ad_type_فري"), InlineKeyboardButton("مزج", callback_data="ad_type_مزج"), InlineKeyboardButton("🔙 إلغاء", callback_data="main_menu"))
-        bot.send_message(message.chat.id, "⟨ 2/7 ⟩ اختر نوع المجموعة:", reply_markup=markup, parse_mode='HTML')
+        bot.send_message(message.chat.id, "<b>⟨ 2/7 ⟩ اختر نوع المجموعة:</b>", reply_markup=markup, parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("ad_type_"))
 def ad_set_type(call):
@@ -694,7 +743,7 @@ def ad_set_type(call):
     ad_builder_state[uid]['group_type'] = call.data.replace("ad_type_", "")
     ad_builder_state[uid]['step'] = 'waiting_group_link'
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 إلغاء", callback_data="main_menu"))
-    send_or_edit(call, "⟨ 3/7 ⟩ أرسل رابط المجموعة:", markup)
+    send_or_edit(call, "<b>⟨ 3/7 ⟩ أرسل رابط المجموعة:</b>", markup)
 
 # ==========================================
 # 11. التشغيل
