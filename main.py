@@ -55,21 +55,78 @@ def get_default_settings():
     return {"status": "ON", "category": "فلسفي", "language": "عربي", "hashtags": "#RedWorld #عالم_الأحمر"}
 
 # ==========================================
-# 3. النصوص التعليمية (الكلايش)
+# 3. النصوص التعليمية الفخمة والطويلة
 # ==========================================
 MENU_TEXTS = {
-    "main_menu": "<b>⟨ لوحة التحكم الرئيسية ⟩</b>\n────────────────────\n\n<blockquote>مرحباً بك في مركز إدارة عالم الأحمر.\n\n• <b>إنشاء محتوى:</b> لتصميم منشورات (صورة/فيديو).\n• <b>التوليد النصي:</b> لإنشاء إعلانات وحقوق صوتية.\n• <b>دردشة Gaski:</b> للتحدث مع الذكاء الاصطناعي.\n• <b>السورس:</b> معلومات النظام.</blockquote>",
-    "menu_create": "<b>⟨ استوديو المحتوى ⟩</b>\n────────────────────\n\n<blockquote>من هنا يمكنك إنشاء منشوراتك.\nاختر إرسال صورة أو فيديو، وسيقوم الذكاء الاصطناعي بتوليد عبارة مناسبة لك بناءً على الفئة التي تختارها.</blockquote>",
-    "menu_tools": "<b>⟨ أدوات التوليد والنشر ⟩</b>\n────────────────────\n\n<blockquote>هنا تجد أدوات التوليد النصي، وبناء الإعلانات، وختم الحقوق الصوتية.</blockquote>",
-    "start_chat_gaski": "<b>⟨ دردشة Gaski ⟩</b>\n────────────────────\n\n<blockquote>أهلاً بك في العقل المدبر.\nتحدث معي بحرية، اسألني أي شيء.</blockquote>",
-    "start_ad_builder": "<b>⟨ بروتوكول الإعلان ⟩</b>\n────────────────────\n\n<blockquote>سنقوم ببناء إعلان احترافي لمجموعتك.</blockquote>",
-    "start_audio_edit": "<b>⟨ ختم الحقوق الصوتي ⟩</b>\n────────────────────\n\n<blockquote>أرسل صورة الغلاف أولاً، ثم أرسل ملف الصوت MP3.</blockquote>",
-    "send_photo_mode": "<b>⟨ إرسال صورة ⟩</b>\n────────────────────\n\n<blockquote>أرسل الصورة التي تريد إنشاء عبارة عليها.</blockquote>",
-    "send_video_mode": "<b>⟨ إرسال فيديو ⟩</b>\n────────────────────\n\n<blockquote>أرسل الفيديو الذي تريد إنشاء عبارة عليه.</blockquote>",
-    "waiting_for_photo": "<b>⟨ في انتظار الصورة ⟩</b>\n────────────────────\n\n<blockquote>يرجى إرسال الصورة الآن.</blockquote>",
-    "waiting_for_video": "<b>⟨ في انتظار الفيديو ⟩</b>\n────────────────────\n\n<blockquote>يرجى إرسال الفيديو الآن.</blockquote>",
-    "welcome": "<b>⟨ بوابة عالم الأحمر ⟩</b>\n────────────────────\n\n<blockquote>مرحباً بك في <b>R W | Bot</b>\nالنظام المتكامل لإدارة قنوات تيليجرام باحترافية.</blockquote>\n\n<i>اضغط على زر لوحة التحكم للبدء.</i>",
-    "admin_panel": "<b>🛡️ لوحة التحكم الأمنية</b>\n────────────────────\n\n<blockquote>مرحباً بك أيها المالك.\nمن هنا يمكنك التحكم في إعدادات البوت، قنوات الاشتراك، والوسائط.</blockquote>"
+    "main_menu": (
+        "<b>╭─━━━━━━━『 ⚙️ لوحة التحكم ⚙️ 』━━━━━━━─╮</b>\n\n"
+        "<blockquote>مرحباً بك في مركز إدارة عالم الأحمر.\n"
+        "هنا تجد كل ما تحتاجه لإدارة محتواك وقناتك باحترافية تامة.</blockquote>\n\n"
+        "📌 <b>الأقسام المتاحة:</b>\n"
+        "├ 🎨 <b>إنشاء محتوى:</b> لتصميم منشوراتك.\n"
+        "├ 🛠️ <b>التوليد النصي:</b> لإنشاء إعلاناتك.\n"
+        "├ 💬 <b>دردشة Gaski:</b> للتحدث مع الذكاء الاصطناعي.\n"
+        "├ 📊 <b>السورس:</b> لمعرفة معلومات النظام.\n"
+        "└ 🚪 <b>مغادرة القناة:</b> لفك ارتباط البوت بقناتك.\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "menu_create": (
+        "<b>╭─━━━━━━━『 🎨 استوديو المحتوى 』━━━━━━━─╮</b>\n\n"
+        "<blockquote>من هنا يمكنك إنشاء منشوراتك بسهولة.\n"
+        "اختر إرسال صورة أو فيديو، وسيقوم الذكاء الاصطناعي بتوليد عبارة مناسبة لك بناءً على الفئة التي تختارها.</blockquote>\n\n"
+        "🖼️ <b>إرسال صورة:</b> لتصميم صورة مع عبارة.\n"
+        "🎬 <b>إرسال فيديو:</b> لتصميم فيديو مع عبارة.\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "menu_tools": (
+        "<b>╭─━━━━━━━『 🛠️ أدوات النشر 』━━━━━━━─╮</b>\n\n"
+        "<blockquote>هنا تجد أدوات التوليد النصي، وبناء الإعلانات، وختم الحقوق الصوتية.</blockquote>\n\n"
+        "📢 <b>إعلان ترويجي:</b> لبناء إعلان لمجموعتك.\n"
+        "🎵 <b>حقوق النشر:</b> لإضافة غلاف صوتي.\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "start_chat_gaski": (
+        "<b>╭─━━━━━━━『 💬 دردشة Gaski 』━━━━━━━─╮</b>\n\n"
+        "<blockquote>أهلاً بك في العقل المدبر.\n"
+        "تحدث معي بحرية، اسألني أي شيء، وسأجيبك فوراً.</blockquote>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "start_ad_builder": (
+        "<b>╭─━━━━━━━『 📢 بروتوكول الإعلان 』━━━━━━━─╮</b>\n\n"
+        "<blockquote>سنقوم ببناء إعلان احترافي لمجموعتك خطوة بخطوة.</blockquote>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "start_audio_edit": (
+        "<b>╭─━━━━━━━『 🎵 ختم الحقوق 』━━━━━━━─╮</b>\n\n"
+        "<blockquote>أرسل صورة الغلاف أولاً، ثم أرسل ملف الصوت MP3.</blockquote>\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    ),
+    "send_photo_mode": "<b>🖼️ أرسل الصورة الآن:</b>\n\n<blockquote>سيتم تصميمها وإضافة العبارة.</blockquote>",
+    "send_video_mode": "<b>🎬 أرسل الفيديو الآن:</b>\n\n<blockquote>سيتم تصميمه وإضافة العبارة.</blockquote>",
+    "waiting_for_photo": "<b>🖼️ في انتظار الصورة:</b>\n\n<blockquote>يرجى إرسال الصورة الآن.</blockquote>",
+    "waiting_for_video": "<b>🎬 في انتظار الفيديو:</b>\n\n<blockquote>يرجى إرسال الفيديو الآن.</blockquote>",
+    "welcome": (
+        "<b>╭─━━━━━━━『 🟥 بوابة عالم الأحمر 🟥 』━━━━━━━─╮</b>\n\n"
+        "<blockquote>مرحباً بك في <b>R W | Bot</b>\n"
+        "النظام المتكامل لإدارة قنوات تيليجرام باحترافية.</blockquote>\n\n"
+        "⚡ <b>ماذا يمكن لهذا البوت فعله؟</b>\n"
+        "├ 🎨 تصميم المحتوى (صور وفيديوهات مع عبارات).\n"
+        "├ 🛠️ التوليد النصي والإعلانات.\n"
+        "├ 🛡️ حماية القنوات (الاشتراك الإجباري).\n"
+        "└ 💬 دردشة مباشرة مع الذكاء الاصطناعي.\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>\n\n"
+        "<i>اضغط على زر لوحة التحكم للبدء.</i>"
+    ),
+    "admin_panel": (
+        "<b>╭─━━━━━━━『 🛡️ لوحة المطور 🛡️ 』━━━━━━━─╮</b>\n\n"
+        "<blockquote>مرحباً بك أيها المالك.\n"
+        "من هنا يمكنك التحكم في إعدادات البوت، قنوات الاشتراك، والوسائط.</blockquote>\n\n"
+        "📊 <b>الإحصائيات:</b> لمعرفة أرقام البوت.\n"
+        "📡 <b>قنوات الاشتراك:</b> لإدارة القنوات.\n"
+        "🖼️ <b>إعدادات الوسائط:</b> لتغيير كليشات البوت.\n"
+        "📢 <b>الإذاعة:</b> لإرسال رسالة للجميع.\n\n"
+        "<b>╰─━━━━━━━━━━━━━━━━━━━━━━━━━─╯</b>"
+    )
 }
 
 # ==========================================
@@ -116,20 +173,22 @@ def safe_delete(chat_id, message_id):
     try: bot.delete_message(chat_id, message_id)
     except: pass
 
-def send_or_edit(call, text, markup, media_key=None):
-    """دالة ذكية: تحذف الرسالة السابقة وترسل رسالة جديدة (صورة أو نص)"""
-    safe_delete(call.message.chat.id, call.message.message_id)
+def send_panel(chat_id, text, markup, media_key=None):
+    # إرسال الصورة وحدها أولاً (بدون نص طويل)
     file_id = config_data.get("media", {}).get(media_key) if media_key else None
     if file_id:
         try:
-            bot.send_photo(call.message.chat.id, file_id, caption=text, reply_markup=markup, parse_mode='HTML')
-            return
+            bot.send_photo(chat_id, file_id, caption="🟥", parse_mode='HTML')
         except:
-            try:
-                bot.send_video(call.message.chat.id, file_id, caption=text, reply_markup=markup, parse_mode='HTML')
-                return
+            try: bot.send_video(chat_id, file_id, caption="🟥", parse_mode='HTML')
             except: pass
-    bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
+    
+    # إرسال النص الفخم مع الأزرار في رسالة منفصلة تحتها
+    bot.send_message(chat_id, text, reply_markup=markup, parse_mode='HTML')
+
+def send_or_edit(call, text, markup, media_key=None):
+    safe_delete(call.message.chat.id, call.message.message_id)
+    send_panel(call.message.chat.id, text, markup, media_key)
 
 # ==========================================
 # 5. أوامر البداية والاشتراك
@@ -156,12 +215,7 @@ def send_welcome(message):
     if user_id == ADMIN_ID or str(user_id) in user_channels:
         markup.add(InlineKeyboardButton("فتح لوحة التحكم", callback_data="main_menu"))
     
-    file_id = config_data.get("media", {}).get("welcome")
-    if file_id:
-        try: bot.send_photo(message.chat.id, file_id, caption=MENU_TEXTS["welcome"], reply_markup=markup, parse_mode='HTML')
-        except: bot.send_video(message.chat.id, file_id, caption=MENU_TEXTS["welcome"], reply_markup=markup, parse_mode='HTML')
-    else:
-        bot.send_message(message.chat.id, MENU_TEXTS["welcome"], reply_markup=markup, parse_mode='HTML')
+    send_panel(message.chat.id, MENU_TEXTS["welcome"], markup, media_key="welcome")
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def check_sub(call):
@@ -181,7 +235,7 @@ def verify_channel(call):
         msg = bot.send_message(call.message.chat.id, "<b>أرسل معرف القناة:</b>", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="main_menu")), parse_mode='HTML')
         bot.register_next_step_handler(msg, manual_verify, call.from_user.id)
     else: 
-        perform_verification(call.message.chat.id, call.from_user.id, channel_id)
+        perform_verification(call.message.chat.id, call.from_user.id, channel_id, call.message.message_id)
 
 def manual_verify(message, user_id):
     if message.text == "إلغاء": return
@@ -189,16 +243,20 @@ def manual_verify(message, user_id):
     if not channel_input.startswith('@'): channel_input = '@' + channel_input
     user_channels[str(user_id)] = channel_input
     save_json("user_channels.json", user_channels)
-    perform_verification(message.chat.id, user_id, channel_input)
+    perform_verification(message.chat.id, user_id, channel_input, message.message_id)
 
-def perform_verification(chat_id, user_id, channel_id):
+def perform_verification(chat_id, user_id, channel_id, msg_id_to_delete):
     msg = bot.send_message(chat_id, "<i>جاري الفحص...</i>", parse_mode='HTML')
     try:
         chat_info = bot.get_chat(channel_id)
         bot_member = bot.get_chat_member(channel_id, bot.get_me().id)
         if bot_member.status in ['administrator', 'creator'] and getattr(bot_member, 'can_post_messages', False):
-            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("لوحة التحكم", callback_data="main_menu"))
-            bot.edit_message_text(f"<b>تم التحقق:</b> {chat_info.title}", chat_id=chat_id, message_id=msg.message_id, reply_markup=markup, parse_mode='HTML')
+            # حذف رسالة الفحص ورسالة القائمة القديمة
+            safe_delete(chat_id, msg.message_id)
+            safe_delete(chat_id, msg_id_to_delete)
+            # إرسال لوحة التحكم الرئيسية مباشرة
+            markup = get_main_panel(user_id)
+            send_panel(chat_id, MENU_TEXTS["main_menu"], markup, media_key="welcome")
         else:
             bot.edit_message_text("<b>فشل:</b> البوت ليس مشرفاً أو لا يملك صلاحية النشر.", chat_id=chat_id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu")), parse_mode='HTML')
     except Exception as e:
@@ -252,7 +310,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط (المطور)
+# 8. إعدادات الوسائط
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -289,7 +347,9 @@ def media_upload_choice(call):
     
     text = f"<b>📤 أرسل الـ{media_type} الآن</b>\n────────────────────\n\n<blockquote>سيتم حفظ الوسائط وتعيينها.</blockquote>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 إلغاء والرجوع", callback_data="admin_media_settings"))
-    safe_delete(call.message.chat.id, call.message.message_id)
+    
+    send_or_edit(call, text, markup)
+    
     msg = bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
     bot.register_next_step_handler(msg, save_media, key, media_type)
 
@@ -306,11 +366,12 @@ def save_media(message, key, media_type):
         
     config_data["media"][key] = file_id
     save_config(config_data)
+    
     safe_delete(message.chat.id, message.message_id)
     bot.send_message(message.chat.id, "✅ تم حفظ الوسائط بنجاح.", reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("🔙 رجوع", callback_data="admin_media_settings")))
 
 # ==========================================
-# 9. إدارة الاشتراك الإجباري (المطور)
+# 9. إدارة الاشتراك الإجباري
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
 def admin_channels(call):
