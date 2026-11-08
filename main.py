@@ -320,7 +320,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط
+# 8. إعدادات الوسائط (تم حل المشكلة النهائية)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -352,12 +352,11 @@ def media_set_choice(call):
 @bot.callback_query_handler(func=lambda call: call.data.startswith("media_upload_"))
 def media_upload_choice(call):
     if call.from_user.id != ADMIN_ID: return
-    parts = call.data.split("_")
-    key = parts[2]
-    media_type = parts[3]
     
-    if len(parts) > 4:
-        key = "_".join(parts[2:-1])
+    # ✅ الحل النهائي: قراءة المفتاح من النهاية لتجنب مشكلة الشرطة السفلية
+    parts = call.data.split("_")
+    media_type = parts[-1]
+    key = "_".join(parts[2:-1])
     
     media_save_state[call.from_user.id] = {'key': key, 'type': media_type}
     
@@ -368,7 +367,7 @@ def media_upload_choice(call):
     bot.send_message(call.message.chat.id, text, reply_markup=markup, parse_mode='HTML')
 
 # ==========================================
-# 9. إدارة الاشتراك الإجباري (تم إصلاحه نهائياً)
+# 9. إدارة الاشتراك الإجباري (تم إصلاحه)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
 def admin_channels(call):
