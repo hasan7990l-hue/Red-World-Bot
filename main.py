@@ -319,7 +319,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط (تم حل المشكلة النهائية)
+# 8. إعدادات الوسائط
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -709,6 +709,17 @@ def confirm_post(call):
         main_menu(call)
     except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
 
+# ==========================================
+# 13. معالجات إضافية (تمت إضافتها)
+# ==========================================
+@bot.callback_query_handler(func=lambda call: call.data == "menu_tools")
+def menu_tools(call):
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton("إنشاء إعلان ترويجي", callback_data="start_ad_builder"),
+        InlineKeyboardButton("حقوق النشر الصوتي", callback_data="start_audio_edit"),
+        InlineKeyboardButton("رجوع", callback_data="main_menu"))
+    send_or_edit(call, MENU_TEXTS["menu_tools"], markup, media_key="tools")
+
 @bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
 def start_gaski_chat(call):
     chat_state[call.from_user.id] = True
@@ -816,7 +827,7 @@ def ad_set_type(call):
     send_or_edit(call, "<b>الخطوة 3/7: أرسل رابط المجموعة:</b>", markup)
 
 # ==========================================
-# 13. التشغيل
+# 14. التشغيل
 # ==========================================
 print("Red World Bot is running...")
 bot.infinity_polling()
