@@ -11,7 +11,7 @@ import base64
 # 1. الإعدادات الأساسية
 # ==========================================
 TELEGRAM_TOKEN = "8180650384:AAHX37rerimsZIWBEc71HleexJKWqSaSsZ0"
-GROQ_API_KEY   = "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"
+GROQ_API_KEY   = "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"
 ADMIN_ID = 8456056018
 CHANNEL_LINK = "https://t.me/Eror_7"
 GROQ_MODEL = "qwen/qwen3.8-27b" 
@@ -29,19 +29,13 @@ audio_cache, user_channels, stats, user_settings, pending_posts = {}, {}, {}, {}
 media_save_state = {}
 temp_messages = {}
 
-# إعدادات الإشعارات الافتراضية
 default_bot_settings = {
     "contact_enabled": True,
     "notify_login": True,
     "notify_ban": True,
     "notify_promote": True,
     "notify_sub": True,
-    "stats": {
-        "total_logins": 0,
-        "total_bans": 0,
-        "total_promotes": 0,
-        "total_subs": 0
-    }
+    "stats": {"total_logins": 0, "total_bans": 0, "total_promotes": 0, "total_subs": 0}
 }
 
 # ==========================================
@@ -58,7 +52,6 @@ def save_config(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 config_data = load_config()
-# تأمين المفاتيح الجديدة
 if "media" not in config_data: config_data["media"] = {}
 for k in ["welcome", "create", "tools", "chat", "admin", "force_sub", "source"]:
     if k not in config_data["media"]: config_data["media"][k] = None
@@ -240,11 +233,9 @@ def format_ai_response(text):
     text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
     return text
 
-# دالة إرسال الإشعارات للمطور
 def send_admin_notification(user, action_type, custom_text):
     if not bot_settings.get(f"notify_{action_type}", True): return
     
-    # تحديث الإحصائيات
     stat_key = f"total_{action_type}s"
     if action_type == "login": stat_key = "total_logins"
     elif action_type == "ban": stat_key = "total_bans"
@@ -270,7 +261,7 @@ def send_admin_notification(user, action_type, custom_text):
     except: pass
 
 # ==========================================
-# 5. أوامر البداية والاشتراك
+# 5. أوامر البداية والاشتراك (تم إصلاح تكرار الإشعار)
 # ==========================================
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -278,8 +269,10 @@ def send_welcome(message):
     safe_delete(message.chat.id, message.message_id)
     clear_temp(message.chat.id, user_id)
     
-    # إشعار دخول
-    send_admin_notification(message.from_user, "login", "إشعار دخول جديد")
+    # إشعار دخول (يُرسل مرة واحدة فقط إذا كان المستخدم جديداً)
+    if user_id not in user_settings:
+        send_admin_notification(message.from_user, "login", "إشعار دخول جديد")
+        user_settings[user_id] = get_default_settings()
     
     mention = get_mention(message.from_user)
     
@@ -289,12 +282,7 @@ def send_welcome(message):
             markup.add(InlineKeyboardButton(f"اشترك في {ch['name']}", url=f"https://t.me/{ch['id'].replace('@', '')}"))
         markup.add(InlineKeyboardButton("تحقق من الاشتراك", callback_data="check_sub"))
         
-        # إشعار محاولة اشتراك
-        send_admin_notification(message.from_user, "sub", "محاولة استخدام البوت (غير مشترك)")
-        
         return send_temp(message.chat.id, user_id, f"<b>بوابة مغلقة</b>\n\n<b>عذراً {mention}، يجب عليك الاشتراك في القنوات التالية أولاً لتتمكن من استخدام البوت.</b>", markup, media_key="force_sub")
-    
-    if user_id not in user_settings: user_settings[user_id] = get_default_settings()
     
     markup = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel"),
@@ -311,8 +299,6 @@ def check_sub(call):
     if check_subscription(call.from_user.id):
         bot.answer_callback_query(call.id, "تم التحقق بنجاح!", show_alert=True)
         safe_delete(call.message.chat.id, call.message.message_id)
-        # إشعار اشتراك ناجح
-        send_admin_notification(call.from_user, "sub", "اشتراك جديد تم التحقق منه")
         send_welcome(call.message)
     else: 
         bot.answer_callback_query(call.id, "لم تشترك في جميع القنوات بعد.", show_alert=True)
@@ -351,7 +337,6 @@ def perform_verification(chat_id, user_id, channel_id, msg_id_to_delete):
             if msg_id_to_delete: safe_delete(chat_id, msg_id_to_delete)
             clear_temp(chat_id, user_id)
             
-            # إشعار رفع البوت مشرف
             send_admin_notification(bot.get_chat(user_id), "promote", "تم رفع البوت مشرفاً في قناة")
             
             markup = get_main_panel(user_id)
@@ -444,30 +429,23 @@ def refresh_bot(call):
 def admin_notifications(call):
     if call.from_user.id != ADMIN_ID: return
     text = "<b>إعدادات الإشعارات</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>تحكم في الإشعارات التي تصلك:</b>"
-    
     markup = InlineKeyboardMarkup(row_width=2)
-    
-    # الدخول
     markup.add(
         InlineKeyboardButton("تفعيل اشعار الدخول", callback_data="notif_login_on"),
         InlineKeyboardButton("تعطيل اشعار الدخول", callback_data="notif_login_off"),
     )
-    # الحظر
     markup.add(
         InlineKeyboardButton("تفعيل اشعار الحظر", callback_data="notif_ban_on"),
         InlineKeyboardButton("تعطيل اشعار الحظر", callback_data="notif_ban_off"),
     )
-    # رفع البوت
     markup.add(
         InlineKeyboardButton("تفعيل اشعار الرفع", callback_data="notif_promote_on"),
         InlineKeyboardButton("تعطيل اشعار الرفع", callback_data="notif_promote_off"),
     )
-    # الاشتراك
     markup.add(
         InlineKeyboardButton("تفعيل اشعار الاشتراك", callback_data="notif_sub_on"),
         InlineKeyboardButton("تعطيل اشعار الاشتراك", callback_data="notif_sub_off"),
     )
-    
     markup.add(InlineKeyboardButton("رجوع", callback_data="admin_panel"))
     send_or_edit(call, text, markup)
 
@@ -477,14 +455,11 @@ def toggle_notification(call):
     parts = call.data.split("_")
     notif_type = parts[1]
     state = True if parts[2] == "on" else False
-    
     bot_settings[f"notify_{notif_type}"] = state
     save_json(SETTINGS_FILE, bot_settings)
-    
     status_text = "مفعل ✅" if state else "معطل ❌"
     bot.answer_callback_query(call.id, f"تم {status_text} إشعار {notif_type}.")
     admin_notifications(call)
-
 # ==========================================
 # 8. إعدادات الكلايش (نظام التاك)
 # ==========================================
@@ -501,7 +476,7 @@ def admin_templates(call):
     )
     send_or_edit(call, text, markup)
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("tpl_"))
+@bot.callback_query_handler(func=lambda call: call.data.startswith("tpl_") and not call.data.startswith("tpl_del_") and not call.data.startswith("tpl_change_"))
 def tpl_action(call):
     if call.from_user.id != ADMIN_ID: return
     key = call.data.replace("tpl_", "")
@@ -530,7 +505,6 @@ def tpl_delete(call):
     save_config(config_data)
     
     bot.answer_callback_query(call.id, "تم حذف الكليشة بنجاح.")
-    # إعادة إرسال رسالة الإدارة
     call.data = f"tpl_{key}"
     tpl_action(call)
 
@@ -539,16 +513,13 @@ def tpl_change(call):
     if call.from_user.id != ADMIN_ID: return
     key = call.data.replace("tpl_change_", "")
     
-    # حفظ الحالة لانتظار الصورة/الفيديو
     media_save_state[ADMIN_ID] = {'key': key, 'type': 'any'}
     
     text = "<b>أرسل الكليشة الجديدة الآن (صورة أو فيديو):</b>\n\n<b>ملاحظة: يجب أن يحتوي النص المرافق (Caption) على تاك للمستخدم.</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_templates"))
     
     send_or_edit(call, text, markup)
-# ==========================================
-# 9. استقبال الكليشات الجديدة (نظام التاك)
-# ==========================================
+
 @bot.message_handler(content_types=['photo', 'video', 'text'], func=lambda m: m.from_user.id == ADMIN_ID and m.from_user.id in media_save_state and media_save_state[m.from_user.id].get('type') == 'any')
 def handle_template_upload(message):
     uid = message.from_user.id
@@ -561,12 +532,10 @@ def handle_template_upload(message):
     if message.photo: file_id = message.photo[-1].file_id
     elif message.video: file_id = message.video.file_id
     
-    # التحقق من وجود الصورة/الفيديو
     if not file_id:
         safe_delete(message.chat.id, message.message_id)
         return send_temp(message.chat.id, uid, "<b>عذراً، يجب إرسال صورة أو فيديو ككليشة.</b>", InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء", callback_data="admin_templates")))
 
-    # التحقق من التاك
     text_content = message.caption if message.caption else message.text
     if not text_content or "tg://user?id=" not in text_content:
         safe_delete(message.chat.id, message.message_id)
@@ -583,7 +552,7 @@ def handle_template_upload(message):
 
 
 # ==========================================
-# 10. إدارة الاشتراك الإجباري والإذاعة
+# 9. إدارة الاشتراك الإجباري والإذاعة
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
 def admin_channels(call):
@@ -674,7 +643,7 @@ def do_broadcast(message, msg_id_to_delete):
 
 
 # ==========================================
-# 11. إنشاء المحتوى ومعالجة الوسائط
+# 10. إنشاء المحتوى ومعالجة الوسائط
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "menu_create")
 def menu_create(call):
@@ -914,7 +883,7 @@ def confirm_post(call):
 
 
 # ==========================================
-# 12. نظام الحقوق، الإعلانات، والدردشة
+# 11. نظام الحقوق، الإعلانات، والدردشة
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "menu_tools")
 def menu_tools(call):
@@ -935,7 +904,6 @@ def handle_chat_message(message):
     if message.text and message.text.startswith('/'): return
     uid = message.from_user.id
     
-    # التحقق من إعدادات التواصل
     if not bot_settings.get("contact_enabled", True):
         return send_temp(message.chat.id, uid, "<b>عذراً، تم تعطيل التواصل من قبل المطور مؤقتاً.</b>", InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu")))
 
@@ -1000,10 +968,8 @@ def leave_channel(call):
     bot.answer_callback_query(call.id, "تم فك الارتباط.")
     main_menu(call)
 
-# ... (أكواد حقوق النشر والإعلانات كما هي في الكود السابق، لم يتغير فيها شيء) ...
-
 # ==========================================
-# 13. التشغيل
+# 12. التشغيل
 # ==========================================
 print("Red World Bot is running...")
 bot.infinity_polling()
