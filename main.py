@@ -319,7 +319,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 8. إعدادات الوسائط
+# 8. إعدادات الوسائط (تم حل المشكلة النهائية)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
 def admin_media_settings(call):
@@ -352,7 +352,6 @@ def media_set_choice(call):
 def media_upload_choice(call):
     if call.from_user.id != ADMIN_ID: return
     
-    # ✅ الحل النهائي: قراءة المفتاح من النهاية لتجنب مشكلة الشرطة السفلية
     parts = call.data.split("_")
     media_type = parts[-1]
     key = "_".join(parts[2:-1])
