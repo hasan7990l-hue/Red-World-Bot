@@ -14,7 +14,7 @@ TELEGRAM_TOKEN = "8180650384:AAHX37rerimsZIWBEc71HleexJKWqSaSsZ0"
 GROQ_API_KEY   = "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"
 ADMIN_ID = 8456056018
 CHANNEL_LINK = "https://t.me/Eror_7"
-GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct" # تم تغييره لدعم الصور
+GROQ_MODEL = "qwen/qwen3.8-27b"
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 client = Groq(api_key=GROQ_API_KEY)
