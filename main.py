@@ -384,6 +384,7 @@ def admin_panel(call):
         InlineKeyboardButton("قنوات الاشتراك", callback_data="admin_channels"),
         InlineKeyboardButton("إعدادات البوت", callback_data="admin_bot_settings"),
         InlineKeyboardButton("إعدادات الكلايش", callback_data="admin_templates"),
+        InlineKeyboardButton("إعدادات الوسائط", callback_data="admin_media_settings"), # <-- تم إرجاع الزر هنا
         InlineKeyboardButton("الإشعارات", callback_data="admin_notifications"),
         InlineKeyboardButton("الإذاعة", callback_data="admin_broadcast"),
         InlineKeyboardButton("رجوع", callback_data="main_menu")
@@ -401,7 +402,7 @@ def admin_stats(call):
     send_or_edit(call, text, markup)
 
 # ==========================================
-# 7. إعدادات البوت والإشعارات
+# 7. إعدادات البوت والإشعارات والوسائط
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_bot_settings")
 def admin_bot_settings(call):
@@ -466,6 +467,46 @@ def toggle_notification(call):
     status_text = "مفعل ✅" if state else "معطل ❌"
     bot.answer_callback_query(call.id, f"تم {status_text} إشعار {notif_type}.")
     admin_notifications(call)
+
+# دوال إعدادات الوسائط
+@bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
+def admin_media_settings(call):
+    if call.from_user.id != ADMIN_ID: return
+    text = "<b>إعدادات الوسائط</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر القسم الذي تريد تعيين صورة أو فيديو له:</b>"
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton("كليشة الترحيب", callback_data="media_set_welcome"),
+        InlineKeyboardButton("كليشة إنشاء محتوى", callback_data="media_set_create"),
+        InlineKeyboardButton("كليشة الأدوات والإعلانات", callback_data="media_set_tools"),
+        InlineKeyboardButton("كليشة دردشة Gaski", callback_data="media_set_chat"),
+        InlineKeyboardButton("كليشة لوحة التحكم", callback_data="media_set_admin"),
+        InlineKeyboardButton("كليشة الاشتراك الإجباري", callback_data="media_set_force_sub"),
+        InlineKeyboardButton("كليشة السورس", callback_data="media_set_source"),
+        InlineKeyboardButton("رجوع", callback_data="admin_panel")
+    )
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("media_set_"))
+def media_set_choice(call):
+    if call.from_user.id != ADMIN_ID: return
+    key = call.data.replace("media_set_", "")
+    text = f"<b>تعيين وسائط لـ {key}</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>هل تريد تعيين صورة أم فيديو؟</b>"
+    markup = InlineKeyboardMarkup(row_width=2).add(
+        InlineKeyboardButton("صورة", callback_data=f"media_upload_{key}_photo"),
+        InlineKeyboardButton("فيديو", callback_data=f"media_upload_{key}_video"),
+        InlineKeyboardButton("رجوع", callback_data="admin_media_settings")
+    )
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("media_upload_"))
+def media_upload_choice(call):
+    if call.from_user.id != ADMIN_ID: return
+    parts = call.data.split("_")
+    media_type = parts[-1]
+    key = "_".join(parts[2:-1])
+    media_save_state[call.from_user.id] = {'key': key, 'type': media_type}
+    text = f"<b>أرسل الـ{media_type} الآن</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>سيتم حفظ الوسائط وتعيينها.</b>"
+    markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_media_settings"))
+    send_or_edit(call, text, markup)
     # ==========================================
 # 8. إعدادات الكلايش (نظام التاك)
 # ==========================================
@@ -697,7 +738,7 @@ def handle_media(message):
         
         safe_delete(message.chat.id, message.message_id)
         clear_temp(message.chat.id, uid)
-        send_temp(message.chat.id, uid, "<b>تم حفظ الوسائط بنجاح ✅</b>", InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_panel")))
+        send_temp(message.chat.id, uid, "<b>تم حفظ الوسائط بنجاح ✅</b>", InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_media_settings")))
         return
 
     # --- حالة إنشاء المحتوى (صورة) ---
