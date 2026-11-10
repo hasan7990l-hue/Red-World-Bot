@@ -269,6 +269,7 @@ def send_welcome(message):
     safe_delete(message.chat.id, message.message_id)
     clear_temp(message.chat.id, user_id)
     
+    # إشعار دخول يُرسل مرة واحدة فقط إذا كان المستخدم جديداً
     if user_id not in user_settings:
         send_admin_notification(message.from_user, "login", "إشعار دخول جديد")
         user_settings[user_id] = get_default_settings()
@@ -295,6 +296,10 @@ def send_welcome(message):
 def check_sub(call):
     if check_subscription(call.from_user.id):
         bot.answer_callback_query(call.id, "تم التحقق بنجاح!", show_alert=True)
+        
+        # إشعار الاشتراك يُرسل فقط عند التحقق بنجاح
+        send_admin_notification(call.from_user, "sub", "اشتراك جديد تم التحقق منه")
+        
         safe_delete(call.message.chat.id, call.message.message_id)
         send_welcome(call.message)
     else: 
@@ -320,7 +325,6 @@ def manual_verify(message, user_id, msg_id_to_delete):
     channel_input = message.text.strip()
     if not channel_input.startswith('@'): channel_input = '@' + channel_input
     
-    # التحقق مما إذا كانت القناة جديدة أم لا
     is_new = str(user_id) not in user_channels
     
     user_channels[str(user_id)] = channel_input
@@ -338,11 +342,9 @@ def perform_verification(chat_id, user_id, channel_id, msg_id_to_delete, is_new=
             if msg_id_to_delete: safe_delete(chat_id, msg_id_to_delete)
             clear_temp(chat_id, user_id)
             
-            # إرسال إشعار الرفع فقط إذا كانت القناة جديدة
             if is_new:
                 send_admin_notification(bot.get_chat(user_id), "promote", "تم رفع البوت مشرفاً في قناة جديدة")
             
-            # فتح لوحة التحكم تلقائياً بعد التحقق
             markup = get_main_panel(user_id)
             send_temp(chat_id, user_id, MENU_TEXTS["main_menu"], markup, media_key="welcome")
         else:
