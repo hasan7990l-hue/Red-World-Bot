@@ -338,8 +338,271 @@ def invite_link(call):
     text = f"<b>رابط الدعوة الخاص بك</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ شارك هذا الرابط لدعوة أصدقائك:</b>\n<code>{link}</code>\n\n<b>↺ يمكنك نسخ الرابط بالضغط عليه.</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu"))
     send_or_edit(call, text, markup, media_key="welcome")
+
+# ==========================================
+# 7. لوحة المطور
+# ==========================================
+@bot.callback_query_handler(func=lambda call: call.data == "admin_panel")
+def admin_panel(call):
+    if call.from_user.id != ADMIN_ID: return bot.answer_callback_query(call.id, "للمطور فقط!", show_alert=True)
+    markup = InlineKeyboardMarkup(row_width=2).add(
+        InlineKeyboardButton("الإحصائيات", callback_data="admin_stats"),
+        InlineKeyboardButton("قنوات الاشتراك", callback_data="admin_channels"),
+        InlineKeyboardButton("إعدادات البوت", callback_data="admin_bot_settings"),
+        InlineKeyboardButton("إعدادات الكلايش", callback_data="admin_templates"),
+        InlineKeyboardButton("إعدادات الوسائط", callback_data="admin_media_settings"),
+        InlineKeyboardButton("المحظورين", callback_data="admin_banned"),
+        InlineKeyboardButton("الأزرار المخصصة", callback_data="admin_custom_buttons"),
+        InlineKeyboardButton("الإشعارات", callback_data="admin_notifications"),
+        InlineKeyboardButton("الإذاعة", callback_data="admin_broadcast"),
+        InlineKeyboardButton("رجوع", callback_data="main_menu")
+    )
+    send_or_edit(call, MENU_TEXTS["admin_panel"], markup, media_key="admin")
+
+@bot.callback_query_handler(func=lambda call: call.data == "admin_stats")
+def admin_stats(call):
+    if call.from_user.id != ADMIN_ID: return
+    total_users = len(user_settings)
+    posts = stats.get("published_count", 0)
+    channels_count = len(config_data.get("channels", []))
+    text = f"<b>إحصائيات البوت</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>- إجمالي المستخدمين:</b> <code>{total_users}</code>\n<b>- المنشورات:</b> <code>{posts}</code>\n<b>- قنوات الاشتراك:</b> <code>{channels_count}</code>"
+    markup = InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_panel"))
+    send_or_edit(call, text, markup)
+
+# --- إعدادات البوت ---
+@bot.callback_query_handler(func=lambda call: call.data == "admin_bot_settings")
+def admin_bot_settings(call):
+    if call.from_user.id != ADMIN_ID: return
+    status = "مفعل ✅" if bot_settings.get("contact_enabled") else "معطل ❌"
+    text = f"<b>إعدادات البوت</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ حالة التواصل:</b> {status}\n\n<b>اختر الإجراء المطلوب:</b>"
+    markup = InlineKeyboardMarkup(row_width=2).add(
+        InlineKeyboardButton("تفعيل التواصل", callback_data="toggle_contact_on"),
+        InlineKeyboardButton("تعطيل التواصل", callback_data="toggle_contact_off"),
+        InlineKeyboardButton("تحديث البوت", callback_data="refresh_bot"),
+        InlineKeyboardButton("رجوع", callback_data="admin_panel")
+    )
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("toggle_contact_"))
+def toggle_contact(call):
+    if call.from_user.id != ADMIN_ID: return
+    state = True if call.data == "toggle_contact_on" else False
+    bot_settings["contact_enabled"] = state
+    save_json(SETTINGS_FILE, bot_settings)
+    bot.answer_callback_query(call.id, "تم التحديث.")
+    admin_bot_settings(call)
+
+@bot.callback_query_handler(func=lambda call: call.data == "refresh_bot")
+def refresh_bot(call):
+    if call.from_user.id != ADMIN_ID: return
+    bot.answer_callback_query(call.id, "جاري التحديث...")
+    send_or_edit(call, "<b>تم تحديث البوت وإعادة تشغيله بنجاح ✅</b>", InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_panel")))
+
+# --- إعدادات الإشعارات ---
+@bot.callback_query_handler(func=lambda call: call.data == "admin_notifications")
+def admin_notifications(call):
+    if call.from_user.id != ADMIN_ID: return
+    text = "<b>إعدادات الإشعارات</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>تحكم في الإشعارات التي تصلك:</b>"
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(InlineKeyboardButton("تفعيل اشعار الدخول", callback_data="notif_login_on"), InlineKeyboardButton("تعطيل اشعار الدخول", callback_data="notif_login_off"))
+    markup.add(InlineKeyboardButton("تفعيل اشعار الحظر", callback_data="notif_ban_on"), InlineKeyboardButton("تعطيل اشعار الحظر", callback_data="notif_ban_off"))
+    markup.add(InlineKeyboardButton("تفعيل اشعار الرفع", callback_data="notif_promote_on"), InlineKeyboardButton("تعطيل اشعار الرفع", callback_data="notif_promote_off"))
+    markup.add(InlineKeyboardButton("تفعيل اشعار الاشتراك", callback_data="notif_sub_on"), InlineKeyboardButton("تعطيل اشعار الاشتراك", callback_data="notif_sub_off"))
+    markup.add(InlineKeyboardButton("رجوع", callback_data="admin_panel"))
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("notif_"))
+def toggle_notification(call):
+    if call.from_user.id != ADMIN_ID: return
+    parts = call.data.split("_")
+    notif_type = parts[1]
+    state = True if parts[2] == "on" else False
+    bot_settings[f"notify_{notif_type}"] = state
+    save_json(SETTINGS_FILE, bot_settings)
+    status_text = "مفعل ✅" if state else "معطل ❌"
+    bot.answer_callback_query(call.id, f"تم {status_text} إشعار {notif_type}.")
+    admin_notifications(call)
+
+# --- إعدادات الوسائط ---
+@bot.callback_query_handler(func=lambda call: call.data == "admin_media_settings")
+def admin_media_settings(call):
+    if call.from_user.id != ADMIN_ID: return
+    text = "<b>إعدادات الوسائط</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر القسم الذي تريد تعيين صورة أو فيديو له:</b>"
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton("كليشة الترحيب", callback_data="media_set_welcome"),
+        InlineKeyboardButton("كليشة إنشاء محتوى", callback_data="media_set_create"),
+        InlineKeyboardButton("كليشة الأدوات والإعلانات", callback_data="media_set_tools"),
+        InlineKeyboardButton("كليشة دردشة Gaski", callback_data="media_set_chat"),
+        InlineKeyboardButton("كليشة لوحة التحكم", callback_data="media_set_admin"),
+        InlineKeyboardButton("كليشة الاشتراك الإجباري", callback_data="media_set_force_sub"),
+        InlineKeyboardButton("كليشة السورس", callback_data="media_set_source"),
+        InlineKeyboardButton("رجوع", callback_data="admin_panel")
+    )
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("media_set_"))
+def media_set_choice(call):
+    if call.from_user.id != ADMIN_ID: return
+    key = call.data.replace("media_set_", "")
+    text = f"<b>تعيين وسائط لـ {key}</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>هل تريد تعيين صورة أم فيديو؟</b>"
+    markup = InlineKeyboardMarkup(row_width=2).add(
+        InlineKeyboardButton("صورة", callback_data=f"media_upload_{key}_photo"),
+        InlineKeyboardButton("فيديو", callback_data=f"media_upload_{key}_video"),
+        InlineKeyboardButton("رجوع", callback_data="admin_media_settings")
+    )
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("media_upload_"))
+def media_upload_choice(call):
+    if call.from_user.id != ADMIN_ID: return
+    parts = call.data.split("_")
+    media_type = parts[-1]
+    key = "_".join(parts[2:-1])
+    media_save_state[call.from_user.id] = {'key': key, 'type': media_type}
+    text = f"<b>أرسل الـ{media_type} الآن</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>سيتم حفظ الوسائط وتعيينها.</b>"
+    markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_media_settings"))
+    send_or_edit(call, text, markup)
+
+# --- إعدادات الكلايش ---
+@bot.callback_query_handler(func=lambda call: call.data == "admin_templates")
+def admin_templates(call):
+    if call.from_user.id != ADMIN_ID: return
+    text = "<b>إعدادات الكلايش</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر القسم الذي تريد تعديل كليشته:</b>"
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton("كليشة الترحيب", callback_data="tpl_welcome"),
+        InlineKeyboardButton("كليشة لوحة التحكم", callback_data="tpl_admin"),
+        InlineKeyboardButton("كليشة السورس", callback_data="tpl_source"),
+        InlineKeyboardButton("كليشة الاشتراك الإجباري", callback_data="tpl_force_sub"),
+        InlineKeyboardButton("رجوع", callback_data="admin_panel")
+    )
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("tpl_") and not call.data.startswith("tpl_del_") and not call.data.startswith("tpl_change_"))
+def tpl_action(call):
+    if call.from_user.id != ADMIN_ID: return
+    key = call.data.replace("tpl_", "")
+    media_key_map = {"welcome": "welcome", "admin": "admin", "source": "source", "force_sub": "force_sub"}
+    media_key = media_key_map.get(key, key)
+    has_media = config_data["media"].get(media_key) is not None
+    status = "موجودة ✅" if has_media else "غير موجودة ❌"
+    text = f"<b>إدارة كليشة: {key}</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ الحالة:</b> {status}\n\n<b>اختر الإجراء:</b>"
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton("حذف الكليشة الحالية", callback_data=f"tpl_del_{key}"),
+        InlineKeyboardButton("تغيير الكليشة", callback_data=f"tpl_change_{key}"),
+        InlineKeyboardButton("رجوع", callback_data="admin_templates")
+    )
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("tpl_del_"))
+def tpl_delete(call):
+    if call.from_user.id != ADMIN_ID: return
+    key = call.data.replace("tpl_del_", "")
+    media_key_map = {"welcome": "welcome", "admin": "admin", "source": "source", "force_sub": "force_sub"}
+    media_key = media_key_map.get(key, key)
+    config_data["media"][media_key] = None
+    save_config(config_data)
+    bot.answer_callback_query(call.id, "تم حذف الكليشة بنجاح.")
+    call.data = f"tpl_{key}"
+    tpl_action(call)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("tpl_change_"))
+def tpl_change(call):
+    if call.from_user.id != ADMIN_ID: return
+    key = call.data.replace("tpl_change_", "")
+    media_save_state[ADMIN_ID] = {'key': key, 'type': 'any'}
+    text = "<b>أرسل الكليشة الجديدة الآن (صورة أو فيديو):</b>\n\n<b>ملاحظة: يجب أن يحتوي النص المرافق (Caption) على تاك للمستخدم.</b>"
+    markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_templates"))
+    send_or_edit(call, text, markup)
+
+# --- إدارة الاشتراك الإجباري والإذاعة ---
+@bot.callback_query_handler(func=lambda call: call.data == "admin_channels")
+def admin_channels(call):
+    if call.from_user.id != ADMIN_ID: return
+    text = "<b>إدارة قنوات الاشتراك الإجباري</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر القناة للإدارة أو أضف قناة جديدة.</b>"
+    markup = InlineKeyboardMarkup(row_width=1)
+    channels = config_data.get("channels", [])
+    for i, ch in enumerate(channels):
+        markup.add(InlineKeyboardButton(f"{ch['name']}", callback_data=f"manage_ch_{i}"))
+    markup.add(InlineKeyboardButton("إضافة قناة جديدة", callback_data="add_ch"))
+    markup.add(InlineKeyboardButton("رجوع", callback_data="admin_panel"))
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("manage_ch_"))
+def manage_channel(call):
+    if call.from_user.id != ADMIN_ID: return
+    idx = int(call.data.split("_")[2])
+    channels = config_data.get("channels", [])
+    if idx >= len(channels): return
+    ch = channels[idx]
+    text = f"<b>إدارة القناة: {ch['name']}</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر الإجراء المطلوب:</b>"
+    markup = InlineKeyboardMarkup(row_width=1).add(
+        InlineKeyboardButton("دخول للقناة", url=f"https://t.me/{ch['id'].replace('@', '')}"),
+        InlineKeyboardButton("حذف القناة", callback_data=f"del_ch_{idx}"),
+        InlineKeyboardButton("رجوع", callback_data="admin_channels")
+    )
+    send_or_edit(call, text, markup)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("del_ch_"))
+def del_ch(call):
+    if call.from_user.id != ADMIN_ID: return
+    idx = int(call.data.split("_")[2])
+    config_data["channels"].pop(idx)
+    save_config(config_data)
+    bot.answer_callback_query(call.id, "تم حذف القناة.")
+    admin_channels(call)
+
+@bot.callback_query_handler(func=lambda call: call.data == "add_ch")
+def add_ch(call):
+    if call.from_user.id != ADMIN_ID: return
+    text = "<b>إضافة قناة جديدة</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>أرسل معرف القناة الآن (مثلاً: @MyChannel).</b>"
+    markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_channels"))
+    send_or_edit(call, text, markup)
+    msg = send_temp(call.message.chat.id, call.from_user.id, "<b>في انتظار معرف القناة...</b>", None)
+    bot.register_next_step_handler(msg, save_new_channel, msg.message_id)
+
+def save_new_channel(message, msg_id_to_delete):
+    safe_delete(message.chat.id, message.message_id)
+    if message.from_user.id != ADMIN_ID: return
+    if not message.text or message.text == "إلغاء": return
+    clear_temp(message.chat.id, ADMIN_ID)
+    channel_input = message.text.strip()
+    if not channel_input.startswith('@'): channel_input = '@' + channel_input
+    try:
+        chat = bot.get_chat(channel_input)
+        channel_name = chat.title
+    except:
+        channel_name = channel_input
+    config_data["channels"].append({"id": channel_input, "name": channel_name})
+    save_config(config_data)
+    safe_delete(message.chat.id, msg_id_to_delete)
+    send_temp(message.chat.id, ADMIN_ID, f"<b>تم إضافة القناة:</b> {channel_name}", InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_channels")))
+
+@bot.callback_query_handler(func=lambda call: call.data == "admin_broadcast")
+def admin_broadcast(call):
+    if call.from_user.id != ADMIN_ID: return
+    text = "<b>الإذاعة</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>أرسل الرسالة التي تريد إذاعتها لجميع المستخدمين.</b>"
+    markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء والرجوع", callback_data="admin_panel"))
+    send_or_edit(call, text, markup)
+    msg = send_temp(call.message.chat.id, ADMIN_ID, "<b>في انتظار نص الإذاعة...</b>", None)
+    bot.register_next_step_handler(msg, do_broadcast, msg.message_id)
+
+def do_broadcast(message, msg_id_to_delete):
+    safe_delete(message.chat.id, message.message_id)
+    if message.from_user.id != ADMIN_ID: return
+    if not message.text or message.text == "إلغاء": return
+    clear_temp(message.chat.id, ADMIN_ID)
+    success, failed = 0, 0
+    msg = send_temp(message.chat.id, ADMIN_ID, "<b>جاري الإذاعة...</b>")
+    for uid in user_settings.keys():
+        try:
+            bot.send_message(uid, f"<b>إعلان من المطور:</b>\n\n{message.text}", parse_mode='HTML')
+            success += 1
+            time.sleep(0.1)
+        except: failed += 1
+    safe_delete(message.chat.id, msg_id_to_delete)
+    bot.edit_message_text(f"<b>تم الإرسال لـ {success} مستخدم.\nفشل لـ {failed}.</b>", chat_id=message.chat.id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_panel")), parse_mode='HTML')
     # ==========================================
-# 8. نظام المحظورين والأزرار المخصصة
+# 8. المحظورين والأزرار المخصصة
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_banned")
 def admin_banned(call):
