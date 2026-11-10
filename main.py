@@ -200,7 +200,34 @@ def send_admin_notification(user, action_type, custom_text):
     except: pass
 
 # ==========================================
-# 5. أوامر البداية والتحقق
+# 5. معالج صورة الغلاف (يجب أن يكون قبل أي معالج آخر للصور)
+# ==========================================
+@bot.message_handler(content_types=['photo'], func=lambda m: m.from_user.id in audio_edit_state and audio_edit_state[m.from_user.id].get('step') == 'waiting_for_cover')
+def handle_cover_photo(message):
+    uid = message.from_user.id
+    if not message.photo: return
+    safe_delete(message.chat.id, message.message_id)
+    try:
+        file_info = bot.get_file(message.photo[-1].file_id)
+        cover_data = bot.download_file(file_info.file_path)
+        audio_edit_state[uid]['cover_data'] = cover_data
+        
+        if audio_edit_state[uid].get('artist'):
+            audio_edit_state[uid]['step'] = 'waiting_for_audio'
+            clear_temp(message.chat.id, uid)
+            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء", callback_data="menu_tools"))
+            send_temp(message.chat.id, uid, "<b>تم استلام الغلاف ✅</b>\n\n<b>الآن أرسل ملف الصوت MP3.</b>", markup)
+        else:
+            audio_edit_state[uid]['step'] = 'waiting_for_artist'
+            clear_temp(message.chat.id, uid)
+            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء", callback_data="menu_tools"))
+            msg = send_temp(message.chat.id, uid, "<b>تم استلام الغلاف ✅</b>\n\n<b>الخطوة 2/5: أرسل اسم الفنان:</b>", markup)
+            bot.register_next_step_handler(msg, ask_audio_title, uid)
+    except Exception as e:
+        send_temp(message.chat.id, uid, f"<b>خطأ: {e}</b>", InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="menu_tools")))
+
+# ==========================================
+# 6. أوامر البداية والتحقق
 # ==========================================
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -285,7 +312,7 @@ def perform_verification(chat_id, user_id, channel_id, msg_id_to_delete, is_new=
         bot.edit_message_text(f"<b>خطأ:</b> {e}", chat_id=chat_id, message_id=msg.message_id, reply_markup=InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu")), parse_mode='HTML')
 
 # ==========================================
-# 6. لوحة التحكم الرئيسية
+# 7. لوحة التحكم الرئيسية
 # ==========================================
 def get_main_panel(user_id): 
     markup = InlineKeyboardMarkup(row_width=1); 
@@ -340,7 +367,7 @@ def invite_link(call):
     send_or_edit(call, text, markup, media_key="welcome")
 
 # ==========================================
-# 7. لوحة المطور
+# 8. لوحة المطور
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_panel")
 def admin_panel(call):
@@ -1230,7 +1257,7 @@ def ad_confirm_action(call):
         bot.register_next_step_handler(msg, ad_builder_text_steps)
 
 # ==========================================
-# 11. نظام الحقوق الصوتي (تم إصلاحه ليعمل قبل معالج الصور)
+# 11. نظام الحقوق الصوتي
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "start_audio_edit")
 def start_audio_edit(call):
@@ -1244,30 +1271,6 @@ def start_audio_edit(call):
         text = MENU_TEXTS["start_audio_edit"]
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء", callback_data="menu_tools"))
     send_or_edit(call, text, markup, media_key="tools")
-
-@bot.message_handler(content_types=['photo'], func=lambda m: m.from_user.id in audio_edit_state and audio_edit_state[m.from_user.id].get('step') == 'waiting_for_cover')
-def handle_cover_photo(message):
-    uid = message.from_user.id
-    if not message.photo: return
-    safe_delete(message.chat.id, message.message_id)
-    try:
-        file_info = bot.get_file(message.photo[-1].file_id)
-        cover_data = bot.download_file(file_info.file_path)
-        audio_edit_state[uid]['cover_data'] = cover_data
-        
-        if audio_edit_state[uid].get('artist'):
-            audio_edit_state[uid]['step'] = 'waiting_for_audio'
-            clear_temp(message.chat.id, uid)
-            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء", callback_data="menu_tools"))
-            send_temp(message.chat.id, uid, "<b>تم استلام الغلاف ✅</b>\n\n<b>الآن أرسل ملف الصوت MP3.</b>", markup)
-        else:
-            audio_edit_state[uid]['step'] = 'waiting_for_artist'
-            clear_temp(message.chat.id, uid)
-            markup = InlineKeyboardMarkup().add(InlineKeyboardButton("إلغاء", callback_data="menu_tools"))
-            msg = send_temp(message.chat.id, uid, "<b>تم استلام الغلاف ✅</b>\n\n<b>الخطوة 2/5: أرسل اسم الفنان:</b>", markup)
-            bot.register_next_step_handler(msg, ask_audio_title, uid)
-    except Exception as e:
-        send_temp(message.chat.id, uid, f"<b>خطأ: {e}</b>", InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="menu_tools")))
 
 def ask_audio_title(message, uid):
     safe_delete(message.chat.id, message.message_id)
