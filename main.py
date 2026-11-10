@@ -1230,7 +1230,7 @@ def ad_confirm_action(call):
         bot.register_next_step_handler(msg, ad_builder_text_steps)
 
 # ==========================================
-# 11. نظام الحقوق الصوتي
+# 11. نظام الحقوق الصوتي (تم إصلاحه ليعمل قبل معالج الصور)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "start_audio_edit")
 def start_audio_edit(call):
