@@ -28,7 +28,7 @@ image_gen_state, video_gen_state, chat_state = {}, {}, {}
 audio_cache, user_channels, stats, user_settings, pending_posts = {}, {}, {}, {}, {}
 media_save_state = {}
 temp_messages = {}
-session_logins = set() # ذاكرة مؤقتة لمنع تكرار إشعار الدخول في نفس الجلسة
+session_logins = set()
 
 default_bot_settings = {
     "contact_enabled": True,
@@ -235,6 +235,10 @@ def format_ai_response(text):
     return text
 
 def send_admin_notification(user, action_type, custom_text):
+    # تجاهل البوتات تماماً لمنع إشعارات البوت لنفسه
+    if getattr(user, 'is_bot', False):
+        return
+
     if not bot_settings.get(f"notify_{action_type}", True): return
     
     stat_key = f"total_{action_type}s"
@@ -270,7 +274,6 @@ def send_welcome(message):
     safe_delete(message.chat.id, message.message_id)
     clear_temp(message.chat.id, user_id)
     
-    # إشعار دخول يُرسل مرة واحدة فقط لكل مستخدم في الجلسة الحالية
     if user_id not in session_logins:
         send_admin_notification(message.from_user, "login", "إشعار دخول جديد")
         session_logins.add(user_id)
@@ -285,7 +288,6 @@ def send_welcome(message):
         
         return send_temp(message.chat.id, user_id, f"<b>بوابة مغلقة</b>\n\n<b>عذراً {mention}، يجب عليك الاشتراك في القنوات التالية أولاً لتتمكن من استخدام البوت.</b>", markup, media_key="force_sub")
     
-    # إخفاء زر لوحة التحكم والاكتفاء بزر التحقق
     markup = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel"),
         InlineKeyboardButton("المبرمج", url=f"tg://user?id={ADMIN_ID}"))
@@ -297,13 +299,8 @@ def send_welcome(message):
 def check_sub(call):
     if check_subscription(call.from_user.id):
         bot.answer_callback_query(call.id, "تم التحقق بنجاح!", show_alert=True)
-        
-        # إشعار الاشتراك يُرسل فقط عند التحقق بنجاح
         send_admin_notification(call.from_user, "sub", "اشتراك جديد تم التحقق منه")
-        
-        # منع إشعار الدخول من الظهور مرة أخرى عند استدعاء الترحيب
         session_logins.add(call.from_user.id)
-        
         safe_delete(call.message.chat.id, call.message.message_id)
         send_welcome(call.message)
     else: 
@@ -330,7 +327,6 @@ def manual_verify(message, user_id, msg_id_to_delete):
     if not channel_input.startswith('@'): channel_input = '@' + channel_input
     
     is_new = str(user_id) not in user_channels
-    
     user_channels[str(user_id)] = channel_input
     save_json("user_channels.json", user_channels)
     safe_delete(message.chat.id, msg_id_to_delete)
