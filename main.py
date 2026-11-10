@@ -28,6 +28,7 @@ image_gen_state, video_gen_state, chat_state = {}, {}, {}
 audio_cache, user_channels, stats, user_settings, pending_posts = {}, {}, {}, {}, {}
 media_save_state = {}
 temp_messages = {}
+session_logins = set() # ذاكرة مؤقتة لمنع تكرار إشعار الدخول في نفس الجلسة
 
 default_bot_settings = {
     "contact_enabled": True,
@@ -269,10 +270,10 @@ def send_welcome(message):
     safe_delete(message.chat.id, message.message_id)
     clear_temp(message.chat.id, user_id)
     
-    # إشعار دخول يُرسل مرة واحدة فقط إذا كان المستخدم جديداً
-    if user_id not in user_settings:
+    # إشعار دخول يُرسل مرة واحدة فقط لكل مستخدم في الجلسة الحالية
+    if user_id not in session_logins:
         send_admin_notification(message.from_user, "login", "إشعار دخول جديد")
-        user_settings[user_id] = get_default_settings()
+        session_logins.add(user_id)
     
     mention = get_mention(message.from_user)
     
@@ -299,6 +300,9 @@ def check_sub(call):
         
         # إشعار الاشتراك يُرسل فقط عند التحقق بنجاح
         send_admin_notification(call.from_user, "sub", "اشتراك جديد تم التحقق منه")
+        
+        # منع إشعار الدخول من الظهور مرة أخرى عند استدعاء الترحيب
+        session_logins.add(call.from_user.id)
         
         safe_delete(call.message.chat.id, call.message.message_id)
         send_welcome(call.message)
