@@ -10,7 +10,7 @@ import base64
 # ==========================================
 # 1. الإعدادات الأساسية
 # ==========================================
-TELEGRAM_TOKEN = "8180650384:AAHX37rerimsZIWBEc71HleexJKWqSaSsZ0"
+TELEGRAM_TOKEN = "8180650384:AAF3dIV5Rfxn7ckT4_bBZgBoPn5Lz-0cmPI"
 GROQ_API_KEY   = "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"
 ADMIN_ID = 8456056018
 CHANNEL_LINK = "https://t.me/Eror_7"
