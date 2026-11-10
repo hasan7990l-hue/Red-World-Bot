@@ -135,7 +135,7 @@ MENU_TEXTS = {
         "<b>↺ التوليد النصي:</b> <b>إعلانات وحقوق.</b>\n"
         "<b>↺ حماية القنوات:</b> <b>اشتراك إجباري.</b>\n"
         "<b>↺ دردشة مباشرة:</b> <b>مع الذكاء الاصطناعي.</b>\n\n"
-        "<b>↺ اضغط على زر لوحة التحكم للبدء.</b>\n\n"
+        "<b>↺ اضغط على زر التحقق للبدء.</b>\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>"
     ),
     "admin_panel": (
@@ -261,7 +261,7 @@ def send_admin_notification(user, action_type, custom_text):
     except: pass
 
 # ==========================================
-# 5. أوامر البداية والاشتراك (تم إصلاح تكرار الإشعار)
+# 5. أوامر البداية والاشتراك
 # ==========================================
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -269,7 +269,6 @@ def send_welcome(message):
     safe_delete(message.chat.id, message.message_id)
     clear_temp(message.chat.id, user_id)
     
-    # إشعار دخول (يُرسل مرة واحدة فقط إذا كان المستخدم جديداً)
     if user_id not in user_settings:
         send_admin_notification(message.from_user, "login", "إشعار دخول جديد")
         user_settings[user_id] = get_default_settings()
@@ -284,12 +283,10 @@ def send_welcome(message):
         
         return send_temp(message.chat.id, user_id, f"<b>بوابة مغلقة</b>\n\n<b>عذراً {mention}، يجب عليك الاشتراك في القنوات التالية أولاً لتتمكن من استخدام البوت.</b>", markup, media_key="force_sub")
     
+    # إخفاء زر لوحة التحكم والاكتفاء بزر التحقق
     markup = InlineKeyboardMarkup(row_width=1).add(
         InlineKeyboardButton("التحقق من الرفع", callback_data="verify_channel"),
         InlineKeyboardButton("المبرمج", url=f"tg://user?id={ADMIN_ID}"))
-    
-    if user_id == ADMIN_ID or str(user_id) in user_channels:
-        markup.add(InlineKeyboardButton("فتح لوحة التحكم", callback_data="main_menu"))
     
     welcome_text = MENU_TEXTS["welcome"].replace("مرحباً بك", f"مرحباً بك {mention}")
     send_temp(message.chat.id, user_id, welcome_text, markup, media_key="welcome")
@@ -322,12 +319,16 @@ def manual_verify(message, user_id, msg_id_to_delete):
     clear_temp(message.chat.id, user_id)
     channel_input = message.text.strip()
     if not channel_input.startswith('@'): channel_input = '@' + channel_input
+    
+    # التحقق مما إذا كانت القناة جديدة أم لا
+    is_new = str(user_id) not in user_channels
+    
     user_channels[str(user_id)] = channel_input
     save_json("user_channels.json", user_channels)
     safe_delete(message.chat.id, msg_id_to_delete)
-    perform_verification(message.chat.id, user_id, channel_input, None)
+    perform_verification(message.chat.id, user_id, channel_input, None, is_new)
 
-def perform_verification(chat_id, user_id, channel_id, msg_id_to_delete):
+def perform_verification(chat_id, user_id, channel_id, msg_id_to_delete, is_new=False):
     msg = send_temp(chat_id, user_id, "<b>جاري الفحص...</b>")
     try:
         chat_info = bot.get_chat(channel_id)
@@ -337,8 +338,11 @@ def perform_verification(chat_id, user_id, channel_id, msg_id_to_delete):
             if msg_id_to_delete: safe_delete(chat_id, msg_id_to_delete)
             clear_temp(chat_id, user_id)
             
-            send_admin_notification(bot.get_chat(user_id), "promote", "تم رفع البوت مشرفاً في قناة")
+            # إرسال إشعار الرفع فقط إذا كانت القناة جديدة
+            if is_new:
+                send_admin_notification(bot.get_chat(user_id), "promote", "تم رفع البوت مشرفاً في قناة جديدة")
             
+            # فتح لوحة التحكم تلقائياً بعد التحقق
             markup = get_main_panel(user_id)
             send_temp(chat_id, user_id, MENU_TEXTS["main_menu"], markup, media_key="welcome")
         else:
@@ -460,7 +464,7 @@ def toggle_notification(call):
     status_text = "مفعل ✅" if state else "معطل ❌"
     bot.answer_callback_query(call.id, f"تم {status_text} إشعار {notif_type}.")
     admin_notifications(call)
-# ==========================================
+    # ==========================================
 # 8. إعدادات الكلايش (نظام التاك)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_templates")
