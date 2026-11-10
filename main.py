@@ -416,6 +416,7 @@ def get_main_panel(user_id):
         InlineKeyboardButton("إنشاء محتوى (صورة/فيديو)", callback_data="menu_create"), 
         InlineKeyboardButton("التوليد النصي والإعلانات", callback_data="menu_tools"), 
         InlineKeyboardButton("دردشة Gaski", callback_data="start_chat_gaski"), 
+        InlineKeyboardButton("لمحة عن البوت", callback_data="bot_glance"),
         InlineKeyboardButton("رابط دعوة البوت", callback_data="invite_link"),
         InlineKeyboardButton("السورس", callback_data="show_source"),
         InlineKeyboardButton("مغادرة القناة", callback_data="leave_channel")
@@ -434,6 +435,25 @@ def main_menu(call):
     markup = get_main_panel(uid)
     send_or_edit(call, MENU_TEXTS["main_menu"], markup, media_key="welcome")
 
+@bot.callback_query_handler(func=lambda call: call.data == "bot_glance")
+def bot_glance(call):
+    bot_info = bot.get_me()
+    total_users = len(user_settings)
+    posts = stats.get("published_count", 0)
+    channels_count = len(config_data.get("channels", []))
+    text = (
+        f"<b>لمحة عن البوت</b>\n"
+        f"<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+        f"<b>↺ الاسم:</b> {bot_info.first_name}\n"
+        f"<b>↺ المعرف:</b> @{bot_info.username}\n"
+        f"<b>↺ المستخدمين:</b> <code>{total_users}</code>\n"
+        f"<b>↺ المنشورات:</b> <code>{posts}</code>\n"
+        f"<b>↺ القنوات المربوطة:</b> <code>{channels_count}</code>\n\n"
+        f"<b>↺ المطور:</b> <a href='tg://user?id={ADMIN_ID}'>اضغط هنا</a>"
+    )
+    markup = InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu"))
+    send_or_edit(call, text, markup, media_key="welcome")
+
 @bot.callback_query_handler(func=lambda call: call.data == "invite_link")
 def invite_link(call):
     bot_username = bot.get_me().username
@@ -441,9 +461,8 @@ def invite_link(call):
     text = f"<b>رابط الدعوة الخاص بك</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ شارك هذا الرابط لدعوة أصدقائك:</b>\n<code>{link}</code>\n\n<b>↺ يمكنك نسخ الرابط بالضغط عليه.</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu"))
     send_or_edit(call, text, markup, media_key="welcome")
-
-# ==========================================
-# 8. إنشاء المحتوى (المعالج العام للصور)
+    # ==========================================
+# 8. إنشاء المحتوى (الفئات الجديدة والوصف)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "menu_create")
 def menu_create(call):
@@ -469,6 +488,7 @@ def trigger_video_mode(call):
 def handle_media(message):
     uid = message.from_user.id
     
+    # 1. حالة المطور (حفظ الوسائط)
     if uid == ADMIN_ID and uid in media_save_state and media_save_state[uid].get('type') != 'any':
         state = media_save_state[uid]
         key = state['key']
@@ -489,6 +509,7 @@ def handle_media(message):
         send_temp(message.chat.id, uid, "<b>تم حفظ الوسائط بنجاح ✅</b>", InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="admin_media_settings")))
         return
 
+    # 2. حالة إنشاء المحتوى (صورة)
     if uid in image_gen_state and image_gen_state[uid].get('step') == 'waiting_for_photo':
         if message.photo:
             safe_delete(message.chat.id, message.message_id)
@@ -512,6 +533,7 @@ def handle_media(message):
             send_temp(message.chat.id, uid, category_text, markup)
             return
 
+    # 3. حالة إنشاء المحتوى (فيديو)
     if uid in video_gen_state and video_gen_state[uid].get('step') == 'waiting_for_video':
         if message.video or message.video_note:
             safe_delete(message.chat.id, message.message_id)
@@ -559,9 +581,7 @@ def media_language(call):
         InlineKeyboardButton("إلغاء", callback_data="main_menu"))
     text = f"<b>اللغة: {lang_choice}</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر تنسيق النص.</b>"
     send_or_edit(call, text, markup, media_key="create")
-    # ==========================================
-# 9. إكمال نظام إنشاء المحتوى (الوصف والنشر)
-# ==========================================
+
 @bot.callback_query_handler(func=lambda call: call.data.startswith("img_fmt_") or call.data.startswith("vid_fmt_"))
 def media_format_and_desc(call):
     uid = call.from_user.id
@@ -609,7 +629,6 @@ def generate_final_preview(chat_id, uid, is_img, custom_desc=None):
     
     msg = send_temp(chat_id, uid, "<b>جاري توليد العبارة...</b>")
     
-    # تعليمات النموذج بناءً على الفئة المختارة
     category_prompts = {
         "فخم": "اكتب عبارة فخمة، راقية، وملكية تعكس الفخامة والهيبة (بأسلوب سينمائي).",
         "الشعر الثقافي": "اكتب بيت شعر ثقافي عميق وهادف يمس القلب والفكر.",
@@ -793,9 +812,8 @@ def confirm_post(call):
         main_menu(call)
     except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
 
-
 # ==========================================
-# 10. نظام الإعلانات
+# 9. نظام الإعلانات
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "menu_tools")
 def menu_tools(call):
@@ -918,9 +936,8 @@ def ad_confirm_action(call):
         msg = send_temp(call.message.chat.id, uid, "<b>تعديل الإعلان:</b>\n\n<b>أرسل الكليشة (نص الإعلان) الجديدة:</b>", markup)
         bot.register_next_step_handler(msg, ad_builder_text_steps)
 
-
 # ==========================================
-# 11. الدردشة Gaski 
+# 10. الدردشة Gaski 
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "start_chat_gaski")
 def start_gaski_chat(call):
@@ -989,9 +1006,8 @@ def leave_channel(call):
     bot.answer_callback_query(call.id, "تم فك الارتباط.")
     main_menu(call)
 
-
 # ==========================================
-# 12. لوحة المطور وباقي الأقسام
+# 11. لوحة المطور وباقي الأقسام
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_panel")
 def admin_panel(call):
@@ -1187,10 +1203,8 @@ def execute_delete_btn(call):
     call.data = "admin_custom_buttons"
     admin_custom_buttons(call)
 
-# ... (يمكنك إضافة باقي دوال إعدادات البوت والإشعارات والكلايش هنا بنفس الطريقة) ...
-
 # ==========================================
-# 13. التشغيل
+# 12. التشغيل
 # ==========================================
 print("Red World Bot is running...")
 bot.infinity_polling()
