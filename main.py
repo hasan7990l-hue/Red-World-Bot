@@ -769,7 +769,7 @@ def execute_delete_btn(call):
     bot.answer_callback_query(call.id, "تم حذف الزر بنجاح.")
     call.data = "admin_custom_buttons"
     admin_custom_buttons(call)
-    # ==========================================
+# ==========================================
 # 9. إنشاء المحتوى (صورة، فيديو، متحركة)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "menu_create")
@@ -1434,8 +1434,19 @@ def generate_final_preview(chat_id, uid, is_img, custom_desc=None):
     blur_label = blur_labels.get(blur, "بدون حماية")
     final_preview_caption = f"<b>معاينة [{blur_label}]</b>\n\n{final_caption}"
         
-    if media_type == 'photo': bot.send_photo(chat_id, file_id, caption=final_preview_caption, reply_markup=markup, parse_mode='HTML')
-    else: bot.send_video(chat_id, file_id, caption=final_preview_caption, reply_markup=markup, parse_mode='HTML')
+    if media_type == 'photo': 
+        # 🆕 لضمان ظهور السبويلر في المعاينة أيضاً
+        if blur == 'spoiler':
+            file_data = bot.download_file(bot.get_file(file_id).file_path)
+            bot.send_photo(chat_id, io.BytesIO(file_data), caption=final_preview_caption, reply_markup=markup, parse_mode='HTML', has_spoiler=True)
+        else:
+            bot.send_photo(chat_id, file_id, caption=final_preview_caption, reply_markup=markup, parse_mode='HTML')
+    else: 
+        if blur == 'spoiler':
+            file_data = bot.download_file(bot.get_file(file_id).file_path)
+            bot.send_video(chat_id, io.BytesIO(file_data), caption=final_preview_caption, reply_markup=markup, parse_mode='HTML', has_spoiler=True)
+        else:
+            bot.send_video(chat_id, file_id, caption=final_preview_caption, reply_markup=markup, parse_mode='HTML')
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("confirm_"))
 def confirm_post(call):
@@ -1449,37 +1460,42 @@ def confirm_post(call):
     try:
         blur_mode = data.get('blur', 'no')
         
-        # 🆕 تطبيق الحماية حسب الاختيار
+        # 🆕 معالجة الإرسال
         kwargs = {
             'caption': data['caption'],
             'reply_markup': markup,
             'parse_mode': 'HTML'
         }
         
-        if blur_mode == 'spoiler':
-            kwargs['has_spoiler'] = True
         if blur_mode == 'protect':
             kwargs['protect_content'] = True
-        
-        if blur_mode == 'yes':
-            # تطبيق Blur على الصورة
+        elif blur_mode == 'spoiler':
+            kwargs['has_spoiler'] = True
+
+        # 🆕 تحميل الملف كـ BytesIO لضمان عمل has_spoiler
+        if blur_mode == 'spoiler' or blur_mode == 'yes':
             file_info = bot.get_file(data['file_id'])
             file_data = bot.download_file(file_info.file_path)
-            blurred_data = apply_blur_to_image(file_data, 20)
             
+            if blur_mode == 'yes':
+                file_data = apply_blur_to_image(file_data, 20)
+                
             if data['type'] == 'photo':
-                bot.send_photo(data['channel'], io.BytesIO(blurred_data), **kwargs)
+                bot.send_photo(data['channel'], io.BytesIO(file_data), **kwargs)
             else:
-                bot.send_video(data['channel'], data['file_id'], thumb=blurred_data, **kwargs)
+                bot.send_video(data['channel'], io.BytesIO(file_data), **kwargs)
         else:
-            if data['type'] == 'photo': bot.send_photo(data['channel'], data['file_id'], **kwargs)
-            else: bot.send_video(data['channel'], data['file_id'], **kwargs)
+            if data['type'] == 'photo': 
+                bot.send_photo(data['channel'], data['file_id'], **kwargs)
+            else: 
+                bot.send_video(data['channel'], data['file_id'], **kwargs)
             
         stats["published_count"] += 1; save_json("stats.json", stats)
         bot.answer_callback_query(call.id, "تم النشر.")
         del pending_posts[post_id]
         main_menu(call)
-    except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
+    except Exception as e: 
+        bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("change_caption_"))
 def change_caption(call):
@@ -1610,4 +1626,4 @@ def save_button_and_preview(message, post_id, msg_id_to_delete):
 # 15. التشغيل
 # ==========================================
 print("Red World Bot is running...")
-bot.infinity_polling()
+bot.infinity_polling()    
