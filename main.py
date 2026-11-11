@@ -800,7 +800,7 @@ def trigger_animation_mode(call):
     send_or_edit(call, MENU_TEXTS["waiting_for_animation"], markup, media_key="create")
 
 # ==========================================
-# 10. نظام الإعلانات المتطور (أزرار متعددة + تخطي)
+# 10. نظام الإعلانات المتطور
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "menu_tools")
 def menu_tools(call):
@@ -1099,7 +1099,7 @@ def leave_channel(call):
     main_menu(call)
 
 # ==========================================
-# 13. المعالج الشامل لجميع الوسائط
+# 13. المعالج الشامل لجميع الوسائط (بما فيها التشويش)
 # ==========================================
 @bot.message_handler(content_types=['photo', 'video', 'video_note', 'animation'])
 def handle_media(message):
@@ -1174,7 +1174,6 @@ def handle_media(message):
             image_gen_state[uid]['file_id'] = message.photo[-1].file_id
             image_gen_state[uid]['step'] = 'waiting_category'
             
-            # الصفحة الأولى من الأزرار (8 أزرار)
             markup = InlineKeyboardMarkup(row_width=2).add(
                 InlineKeyboardButton("حزين", callback_data="img_cat_حزين"), InlineKeyboardButton("فلسفي", callback_data="img_cat_فلسفي"),
                 InlineKeyboardButton("حب", callback_data="img_cat_حب"), InlineKeyboardButton("اقتباس", callback_data="img_cat_اقتباس"),
@@ -1198,7 +1197,6 @@ def handle_media(message):
             video_gen_state[uid]['file_id'] = file_id
             video_gen_state[uid]['step'] = 'waiting_category'
             
-            # الصفحة الأولى من الأزرار (8 أزرار)
             markup = InlineKeyboardMarkup(row_width=2).add(
                 InlineKeyboardButton("حزين", callback_data="vid_cat_حزين"), InlineKeyboardButton("فلسفي", callback_data="vid_cat_فلسفي"),
                 InlineKeyboardButton("حب", callback_data="vid_cat_حب"), InlineKeyboardButton("اقتباس", callback_data="vid_cat_اقتباس"),
@@ -1440,7 +1438,6 @@ def confirm_post(call):
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton(data['custom_button']['text'], url=data['custom_button']['url']))
     
     try:
-        # معالجة التشويش إذا تم اختياره
         if data['blur'] == 'yes':
             file_info = bot.get_file(data['file_id'])
             file_data = bot.download_file(file_info.file_path)
@@ -1449,7 +1446,6 @@ def confirm_post(call):
             if data['type'] == 'photo':
                 bot.send_photo(data['channel'], io.BytesIO(blurred_data), caption=data['caption'], reply_markup=markup, parse_mode='HTML')
             else:
-                # للفيديو: نرسل الفيديو الأصلي ونضع الصورة المشوشة كـ Thumbnail
                 bot.send_video(data['channel'], data['file_id'], caption=data['caption'], reply_markup=markup, thumb=blurred_data, parse_mode='HTML')
         else:
             if data['type'] == 'photo': bot.send_photo(data['channel'], data['file_id'], caption=data['caption'], reply_markup=markup, parse_mode='HTML')
