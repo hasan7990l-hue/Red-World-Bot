@@ -348,7 +348,8 @@ def invite_link(call):
     text = f"<b>رابط الدعوة الخاص بك</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ شارك هذا الرابط لدعوة أصدقائك:</b>\n<code>{link}</code>\n\n<b>↺ يمكنك نسخ الرابط بالضغط عليه.</b>"
     markup = InlineKeyboardMarkup().add(InlineKeyboardButton("رجوع", callback_data="main_menu"))
     send_or_edit(call, text, markup, media_key="welcome")
-    # ==========================================
+
+# ==========================================
 # 7. لوحة المطور
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "admin_panel")
@@ -768,8 +769,7 @@ def execute_delete_btn(call):
     bot.answer_callback_query(call.id, "تم حذف الزر بنجاح.")
     call.data = "admin_custom_buttons"
     admin_custom_buttons(call)
-
-# ==========================================
+    # ==========================================
 # 9. إنشاء المحتوى (صورة، فيديو، متحركة)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data == "menu_create")
@@ -905,8 +905,10 @@ def ad_confirm_action(call):
             
             proposed_caption = data['ad_text']
             
-            if data['media_type'] == 'photo': bot.send_photo(target_channel, data['file_id'], caption=proposed_caption, reply_markup=markup, parse_mode='HTML')
-            else: bot.send_video(target_channel, data['file_id'], caption=proposed_caption, reply_markup=markup, parse_mode='HTML')
+            if data['media_type'] == 'photo': 
+                bot.send_photo(target_channel, data['file_id'], caption=proposed_caption, reply_markup=markup, parse_mode='HTML', protect_content=True)
+            else: 
+                bot.send_video(target_channel, data['file_id'], caption=proposed_caption, reply_markup=markup, parse_mode='HTML', protect_content=True)
             stats["published_count"] += 1; save_json("stats.json", stats)
             bot.answer_callback_query(call.id, "تم نشر الإعلان بنجاح! ✅", show_alert=True)
             del ad_builder_state[uid]
@@ -1013,7 +1015,7 @@ def publish_audio_action(call):
     if not target_channel: return bot.answer_callback_query(call.id, "لم تقم بربط قناة! استخدم زر (التحقق من الرفع) أولاً.", show_alert=True)
     try:
         markup_channel = InlineKeyboardMarkup(row_width=1).add(InlineKeyboardButton("Red World | عالم الأحمر", url=CHANNEL_LINK))
-        bot.send_audio(target_channel, io.BytesIO(cached['data']), title=cached['title'], performer=cached['artist'], caption=cached['desc'] if cached['desc'] else None, thumb=cached['cover'] if cached['cover'] else None, reply_markup=markup_channel, parse_mode='HTML')
+        bot.send_audio(target_channel, io.BytesIO(cached['data']), title=cached['title'], performer=cached['artist'], caption=cached['desc'] if cached['desc'] else None, thumb=cached['cover'] if cached['cover'] else None, reply_markup=markup_channel, parse_mode='HTML', protect_content=True)
         if action == "save":
             rights_config[str(uid)] = {"artist": cached['artist'], "title": cached['title'], "desc": cached['desc']}
             save_json(RIGHTS_CONFIG_FILE, rights_config)
@@ -1340,11 +1342,14 @@ def media_format_and_blur(call):
     else: return bot.answer_callback_query(call.id, "انتهت الجلسة.", show_alert=True)
     
     prefix = "img" if is_img else "vid"
+    # 🆕 خيارات الحماية الجديدة
     markup = InlineKeyboardMarkup(row_width=2).add(
-        InlineKeyboardButton("تطبيق تشويش", callback_data=f"{prefix}_blur_yes"),
+        InlineKeyboardButton("تشويش الصورة (Blur)", callback_data=f"{prefix}_blur_yes"),
+        InlineKeyboardButton("إخفاء بالسبويلر 👁️", callback_data=f"{prefix}_blur_spoiler"),
+        InlineKeyboardButton("حماية (منع الحفظ) 🔒", callback_data=f"{prefix}_blur_protect"),
         InlineKeyboardButton("بدون تشويش", callback_data=f"{prefix}_blur_no"),
         InlineKeyboardButton("إلغاء", callback_data="main_menu"))
-    text = "<b>هل تريد تطبيق تشويش (Blur) على الوسائط؟</b>"
+    text = "<b>اختر نظام الحماية</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ تشويش الصورة:</b> يطبق بلور على البكسلات.\n<b>↺ إخفاء بالسبويلر:</b> يظهر مشوش حتى يضغط عليه المشاهد (مثل الصورة اللي أرسلتها).\n<b>↺ حماية:</b> يمنع الحفظ والتحويل.\n<b>↺ بدون:</b> نشر عادي."
     send_or_edit(call, text, markup, media_key="create")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("img_blur_") or call.data.startswith("vid_blur_"))
@@ -1420,10 +1425,14 @@ def generate_final_preview(chat_id, uid, is_img, custom_desc=None):
         InlineKeyboardButton("إلغاء", callback_data="main_menu"))
     safe_delete(chat_id, msg.message_id)
     
-    if blur == 'yes':
-        final_preview_caption = f"<b>معاينة [تم تطبيق التشويش]</b>\n\n{final_caption}"
-    else:
-        final_preview_caption = f"<b>معاينة [بدون تشويش]</b>\n\n{final_caption}"
+    blur_labels = {
+        "yes": "تشويش الصورة",
+        "spoiler": "سبويلر (إخفاء)",
+        "protect": "حماية (منع الحفظ)",
+        "no": "بدون حماية"
+    }
+    blur_label = blur_labels.get(blur, "بدون حماية")
+    final_preview_caption = f"<b>معاينة [{blur_label}]</b>\n\n{final_caption}"
         
     if media_type == 'photo': bot.send_photo(chat_id, file_id, caption=final_preview_caption, reply_markup=markup, parse_mode='HTML')
     else: bot.send_video(chat_id, file_id, caption=final_preview_caption, reply_markup=markup, parse_mode='HTML')
@@ -1438,18 +1447,33 @@ def confirm_post(call):
         markup = InlineKeyboardMarkup().add(InlineKeyboardButton(data['custom_button']['text'], url=data['custom_button']['url']))
     
     try:
-        if data['blur'] == 'yes':
+        blur_mode = data.get('blur', 'no')
+        
+        # 🆕 تطبيق الحماية حسب الاختيار
+        kwargs = {
+            'caption': data['caption'],
+            'reply_markup': markup,
+            'parse_mode': 'HTML'
+        }
+        
+        if blur_mode == 'spoiler':
+            kwargs['has_spoiler'] = True
+        if blur_mode == 'protect':
+            kwargs['protect_content'] = True
+        
+        if blur_mode == 'yes':
+            # تطبيق Blur على الصورة
             file_info = bot.get_file(data['file_id'])
             file_data = bot.download_file(file_info.file_path)
             blurred_data = apply_blur_to_image(file_data, 20)
             
             if data['type'] == 'photo':
-                bot.send_photo(data['channel'], io.BytesIO(blurred_data), caption=data['caption'], reply_markup=markup, parse_mode='HTML')
+                bot.send_photo(data['channel'], io.BytesIO(blurred_data), **kwargs)
             else:
-                bot.send_video(data['channel'], data['file_id'], caption=data['caption'], reply_markup=markup, thumb=blurred_data, parse_mode='HTML')
+                bot.send_video(data['channel'], data['file_id'], thumb=blurred_data, **kwargs)
         else:
-            if data['type'] == 'photo': bot.send_photo(data['channel'], data['file_id'], caption=data['caption'], reply_markup=markup, parse_mode='HTML')
-            else: bot.send_video(data['channel'], data['file_id'], caption=data['caption'], reply_markup=markup, parse_mode='HTML')
+            if data['type'] == 'photo': bot.send_photo(data['channel'], data['file_id'], **kwargs)
+            else: bot.send_video(data['channel'], data['file_id'], **kwargs)
             
         stats["published_count"] += 1; save_json("stats.json", stats)
         bot.answer_callback_query(call.id, "تم النشر.")
