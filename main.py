@@ -1130,18 +1130,14 @@ def handle_media(message):
             clear_temp(message.chat.id, uid)
             image_gen_state[uid]['file_id'] = message.photo[-1].file_id
             image_gen_state[uid]['step'] = 'waiting_category'
+            
+            # الصفحة الأولى من الأزرار (8 أزرار)
             markup = InlineKeyboardMarkup(row_width=2).add(
                 InlineKeyboardButton("حزين", callback_data="img_cat_حزين"), InlineKeyboardButton("فلسفي", callback_data="img_cat_فلسفي"),
                 InlineKeyboardButton("حب", callback_data="img_cat_حب"), InlineKeyboardButton("اقتباس", callback_data="img_cat_اقتباس"),
                 InlineKeyboardButton("اشتياق", callback_data="img_cat_اشتياق"), InlineKeyboardButton("خذلان", callback_data="img_cat_خذلان"),
                 InlineKeyboardButton("وحدة", callback_data="img_cat_وحدة"), InlineKeyboardButton("صمود", callback_data="img_cat_صمود"),
-                InlineKeyboardButton("غموض", callback_data="img_cat_غموض"), InlineKeyboardButton("أمل", callback_data="img_cat_أمل"),
-                InlineKeyboardButton("عتاب", callback_data="img_cat_عتاب"), InlineKeyboardButton("سخرية", callback_data="img_cat_سخرية"),
-                InlineKeyboardButton("ندم", callback_data="img_cat_ندم"), InlineKeyboardButton("تحدي", callback_data="img_cat_تحدي"),
-                InlineKeyboardButton("ذكرى", callback_data="img_cat_ذكرى"), InlineKeyboardButton("صمت", callback_data="img_cat_صمت"),
-                InlineKeyboardButton("فخم", callback_data="img_cat_فخم"), InlineKeyboardButton("الشعر الثقافي", callback_data="img_cat_الشعر الثقافي"),
-                InlineKeyboardButton("شعر عراقي", callback_data="img_cat_شعر عراقي"), InlineKeyboardButton("الجوكر", callback_data="img_cat_الجوكر"),
-                InlineKeyboardButton("القصف", callback_data="img_cat_القصف"),
+                InlineKeyboardButton("التالي ⬅️", callback_data="img_page_2"),
                 InlineKeyboardButton("رجوع", callback_data="menu_create"))
             category_text = "<b>تم استلام الصورة بنجاح ✅</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ الخطوة التالية:</b>\n<b>اختر الفئة المناسبة لتصميم العبارة على صورتك.</b>"
             send_temp(message.chat.id, uid, category_text, markup)
@@ -1158,12 +1154,14 @@ def handle_media(message):
             
             video_gen_state[uid]['file_id'] = file_id
             video_gen_state[uid]['step'] = 'waiting_category'
+            
+            # الصفحة الأولى من الأزرار (8 أزرار)
             markup = InlineKeyboardMarkup(row_width=2).add(
                 InlineKeyboardButton("حزين", callback_data="vid_cat_حزين"), InlineKeyboardButton("فلسفي", callback_data="vid_cat_فلسفي"),
                 InlineKeyboardButton("حب", callback_data="vid_cat_حب"), InlineKeyboardButton("اقتباس", callback_data="vid_cat_اقتباس"),
-                InlineKeyboardButton("فخم", callback_data="vid_cat_فخم"), InlineKeyboardButton("الشعر الثقافي", callback_data="vid_cat_الشعر الثقافي"),
-                InlineKeyboardButton("شعر عراقي", callback_data="vid_cat_شعر عراقي"), InlineKeyboardButton("الجوكر", callback_data="vid_cat_الجوكر"),
-                InlineKeyboardButton("القصف", callback_data="vid_cat_القصف"),
+                InlineKeyboardButton("اشتياق", callback_data="vid_cat_اشتياق"), InlineKeyboardButton("خذلان", callback_data="vid_cat_خذلان"),
+                InlineKeyboardButton("وحدة", callback_data="vid_cat_وحدة"), InlineKeyboardButton("صمود", callback_data="vid_cat_صمود"),
+                InlineKeyboardButton("التالي ⬅️", callback_data="vid_page_2"),
                 InlineKeyboardButton("رجوع", callback_data="menu_create"))
             category_text = "<b>تم استلام الفيديو/المتحركة بنجاح ✅</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ الخطوة التالية:</b>\n<b>اختر الفئة المناسبة لتصميم العبارة.</b>"
             send_temp(message.chat.id, uid, category_text, markup)
@@ -1199,7 +1197,7 @@ def handle_media(message):
         return
 
 # ==========================================
-# 14. دالة استقبال ضغطات الفئات (التي كانت مفقودة)
+# 14. دوال استقبال أزرار الفئات (الصفحات)
 # ==========================================
 @bot.callback_query_handler(func=lambda call: call.data.startswith("img_cat_") or call.data.startswith("vid_cat_"))
 def media_category(call):
@@ -1221,6 +1219,58 @@ def media_category(call):
         InlineKeyboardButton("إلغاء", callback_data="main_menu"))
     text = f"<b>الفئة: {cat}</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر لغة العبارة.</b>"
     send_or_edit(call, text, markup, media_key="create")
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("img_page_") or call.data.startswith("vid_page_"))
+def media_pagination(call):
+    uid = call.from_user.id
+    is_img = call.data.startswith("img_page_")
+    page = call.data.split("_")[-1]
+    
+    if page == "2":
+        prefix = "img" if is_img else "vid"
+        markup = InlineKeyboardMarkup(row_width=2).add(
+            InlineKeyboardButton("غموض", callback_data=f"{prefix}_cat_غموض"), InlineKeyboardButton("أمل", callback_data=f"{prefix}_cat_أمل"),
+            InlineKeyboardButton("عتاب", callback_data=f"{prefix}_cat_عتاب"), InlineKeyboardButton("سخرية", callback_data=f"{prefix}_cat_سخرية"),
+            InlineKeyboardButton("ندم", callback_data=f"{prefix}_cat_ندم"), InlineKeyboardButton("تحدي", callback_data=f"{prefix}_cat_تحدي"),
+            InlineKeyboardButton("ذكرى", callback_data=f"{prefix}_cat_ذكرى"), InlineKeyboardButton("صمت", callback_data=f"{prefix}_cat_صمت"),
+            InlineKeyboardButton("التالي ⬅️", callback_data=f"{prefix}_page_3"),
+            InlineKeyboardButton("السابق ➡️", callback_data=f"{prefix}_page_1"),
+            InlineKeyboardButton("رجوع", callback_data="menu_create"))
+        text = "<b>الصفحة 2 من الفئات</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر الفئة المناسبة لتصميم العبارة.</b>"
+        send_or_edit(call, text, markup, media_key="create")
+    elif page == "3":
+        prefix = "img" if is_img else "vid"
+        markup = InlineKeyboardMarkup(row_width=1).add(
+            InlineKeyboardButton("فخم", callback_data=f"{prefix}_cat_فخم"),
+            InlineKeyboardButton("الشعر الثقافي", callback_data=f"{prefix}_cat_الشعر الثقافي"),
+            InlineKeyboardButton("شعر عراقي", callback_data=f"{prefix}_cat_شعر عراقي"),
+            InlineKeyboardButton("الجوكر", callback_data=f"{prefix}_cat_الجوكر"),
+            InlineKeyboardButton("القصف", callback_data=f"{prefix}_cat_القصف"),
+            InlineKeyboardButton("السابق ➡️", callback_data=f"{prefix}_page_2"),
+            InlineKeyboardButton("رجوع", callback_data="menu_create"))
+        text = "<b>الصفحة 3 من الفئات</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>اختر الفئة المناسبة لتصميم العبارة.</b>"
+        send_or_edit(call, text, markup, media_key="create")
+    else:
+        if is_img and uid in image_gen_state:
+            markup = InlineKeyboardMarkup(row_width=2).add(
+                InlineKeyboardButton("حزين", callback_data="img_cat_حزين"), InlineKeyboardButton("فلسفي", callback_data="img_cat_فلسفي"),
+                InlineKeyboardButton("حب", callback_data="img_cat_حب"), InlineKeyboardButton("اقتباس", callback_data="img_cat_اقتباس"),
+                InlineKeyboardButton("اشتياق", callback_data="img_cat_اشتياق"), InlineKeyboardButton("خذلان", callback_data="img_cat_خذلان"),
+                InlineKeyboardButton("وحدة", callback_data="img_cat_وحدة"), InlineKeyboardButton("صمود", callback_data="img_cat_صمود"),
+                InlineKeyboardButton("التالي ⬅️", callback_data="img_page_2"),
+                InlineKeyboardButton("رجوع", callback_data="menu_create"))
+            text = "<b>تم استلام الصورة بنجاح ✅</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ اختر الفئة المناسبة.</b>"
+            send_or_edit(call, text, markup, media_key="create")
+        elif not is_img and uid in video_gen_state:
+            markup = InlineKeyboardMarkup(row_width=2).add(
+                InlineKeyboardButton("حزين", callback_data="vid_cat_حزين"), InlineKeyboardButton("فلسفي", callback_data="vid_cat_فلسفي"),
+                InlineKeyboardButton("حب", callback_data="vid_cat_حب"), InlineKeyboardButton("اقتباس", callback_data="vid_cat_اقتباس"),
+                InlineKeyboardButton("اشتياق", callback_data="vid_cat_اشتياق"), InlineKeyboardButton("خذلان", callback_data="vid_cat_خذلان"),
+                InlineKeyboardButton("وحدة", callback_data="vid_cat_وحدة"), InlineKeyboardButton("صمود", callback_data="vid_cat_صمود"),
+                InlineKeyboardButton("التالي ⬅️", callback_data="vid_page_2"),
+                InlineKeyboardButton("رجوع", callback_data="menu_create"))
+            text = "<b>تم استلام الفيديو/المتحركة بنجاح ✅</b>\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n<b>↺ اختر الفئة المناسبة.</b>"
+            send_or_edit(call, text, markup, media_key="create")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("img_lang_") or call.data.startswith("vid_lang_"))
 def media_language(call):
@@ -1455,7 +1505,7 @@ def confirm_post(call):
     except Exception as e: bot.answer_callback_query(call.id, f"خطأ: {e}", show_alert=True)
 
 # ==========================================
-# 14. التشغيل
+# 15. التشغيل
 # ==========================================
 print("Red World Bot is running...")
 bot.infinity_polling()
